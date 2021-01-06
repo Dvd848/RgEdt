@@ -87,7 +87,6 @@ class TestModel(unittest.TestCase):
         """
         self.assertEqual(self.xml_to_key(expected_xml), tree)
 
-    @unittest.skip
     def test_path_of_one(self):
         self.path_len_test(r"HKEY_CURRENT_CONFIG")
         

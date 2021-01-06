@@ -153,38 +153,53 @@ class Model(object):
     def _build_key_structure(self, key: str):
         key_path = key.split(self.PATH_SEPARATOR)
 
+        # First key in path:
         root_key_str = key_path.pop(0)
+        root_key_const = self._root_key_name_to_value(root_key_str)
+
+        # Last key in path (if exists):
         leaf_key_str = key_path.pop() if len(key_path) > 0 else ""
+
+        # Anything in the middle (if exists)
         middle_path = self.PATH_SEPARATOR.join(key_path)
         
-        res = RegistryKey(name = root_key_str)
-        current_key = res
-        for sub_key_part in key_path:
-            new_key = RegistryKey(name = sub_key_part)
-            current_key.add_sub_key(new_key)
-            current_key = new_key
+        root_key = RegistryKey(name = root_key_str)
+        current_key = root_key
+        for middle_key_str in key_path:
+            middle_key = RegistryKey(name = middle_key_str)
+            current_key.add_sub_key(middle_key)
+            current_key = middle_key
 
-
-        root_key_const = self._root_key_name_to_value(root_key_str)
+        # current_key now represents the key before the last one (or the root key itself in case if the path had only one key)
 
         with winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
             with winreg.OpenKey(root_key_handle, middle_path) as sub_key_handle:
-                current_key.add_sub_key(self._build_subkey_structure(sub_key_handle, leaf_key_str))
+                if leaf_key_str != "":
+                    # Common case: Path contained at least two keys
+                    leaf_key = RegistryKey(name = leaf_key_str)
+                    self._build_subkey_structure(sub_key_handle, leaf_key)
+                    current_key.add_sub_key(leaf_key)
+                else:
+                    # Corner case: Path consisted of just one key (root key)
+                    self._build_subkey_structure(sub_key_handle, root_key, "")
         
-        return res
+        return root_key
 
-    def _build_subkey_structure(self, base_key_handle, sub_key_str: str):
-        current_key = RegistryKey(name = sub_key_str)
-        with winreg.OpenKey(base_key_handle, sub_key_str) as sub_key_handle:
+    def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None):
+
+        if current_key_name is None:
+            current_key_name = current_key.name
+        with winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
             num_sub_keys, num_values, _ = winreg.QueryInfoKey(sub_key_handle)
             for i in range(num_sub_keys):
-                current_key.add_sub_key(self._build_subkey_structure(sub_key_handle, winreg.EnumKey(sub_key_handle, i)))
+                new_key = RegistryKey(name = winreg.EnumKey(sub_key_handle, i))
+                self._build_subkey_structure(sub_key_handle, new_key)
+                current_key.add_sub_key(new_key)
             for i in range(num_values):
                 name, value, key_type = winreg.EnumValue(sub_key_handle, i)
                 val_obj = RegistryValue(name = name, data = value, data_type = key_type)
                 current_key.add_value(val_obj)
         
-        return current_key
 
     @classmethod
     def _root_key_name_to_value(cls, root_key: str): 
