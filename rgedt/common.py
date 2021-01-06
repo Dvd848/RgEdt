@@ -1,0 +1,3 @@
+
+class RgEdtException(Exception):
+    pass

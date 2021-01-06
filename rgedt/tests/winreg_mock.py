@@ -59,14 +59,14 @@ _TypeRecord = namedtuple("TypeRecord", "value function")
 _TYPE_MAPPING = {
     "REG_BINARY":                       _TypeRecord(REG_BINARY, lambda x: _NotImplemented()),
     "REG_DWORD":                        _TypeRecord(REG_DWORD, int),
-    "REG_DWORD_LITTLE_ENDIAN":          _TypeRecord(REG_DWORD_LITTLE_ENDIAN, lambda x: _NotImplemented()),
+    "REG_DWORD_LITTLE_ENDIAN":          _TypeRecord(REG_DWORD_LITTLE_ENDIAN, int),
     "REG_DWORD_BIG_ENDIAN":             _TypeRecord(REG_DWORD_BIG_ENDIAN, lambda x: _NotImplemented()),
     "REG_EXPAND_SZ":                    _TypeRecord(REG_EXPAND_SZ, lambda x: _NotImplemented()),
     "REG_LINK":                         _TypeRecord(REG_LINK, lambda x: _NotImplemented()),
     "REG_MULTI_SZ":                     _TypeRecord(REG_MULTI_SZ, lambda x: _NotImplemented()),
     "REG_NONE":                         _TypeRecord(REG_NONE, lambda x: _NotImplemented()),
-    "REG_QWORD":                        _TypeRecord(REG_QWORD, lambda x: _NotImplemented()),
-    "REG_QWORD_LITTLE_ENDIAN":          _TypeRecord(REG_QWORD_LITTLE_ENDIAN, lambda x: _NotImplemented()),
+    "REG_QWORD":                        _TypeRecord(REG_QWORD, lambda x: int),
+    "REG_QWORD_LITTLE_ENDIAN":          _TypeRecord(REG_QWORD_LITTLE_ENDIAN, int),
     "REG_RESOURCE_LIST":                _TypeRecord(REG_RESOURCE_LIST, lambda x: _NotImplemented()),
     "REG_FULL_RESOURCE_DESCRIPTOR":     _TypeRecord(REG_FULL_RESOURCE_DESCRIPTOR, lambda x: _NotImplemented()),
     "REG_RESOURCE_REQUIREMENTS_LIST":   _TypeRecord(REG_RESOURCE_REQUIREMENTS_LIST, lambda x: _NotImplemented()),
@@ -84,7 +84,11 @@ def InitRegistry(xml) -> None:
 
 class PyHKEY(object):
     def __init__(self, element: ET.Element): 
-        self.element = element
+        self._element = element
+
+    @property
+    def element(self):
+        return self._element
           
     def __enter__(self): 
         return self
@@ -101,6 +105,12 @@ class PyHKEY(object):
     def __bool__(self):
         raise NotImplementedError("Casting handle to boolean functionality isn't implemented")
 
+    def __eq__(self, other):
+        if not isinstance(other, PyHKEY):
+            return False
+        return self.element == other.element
+
+
 def ConnectRegistry(computer_name: Optional[str], key: Literal[_HKEY_MAPPING.keys()]) -> PyHKEY:
     if __registry is None:
         raise RuntimeError("Please initialize the registry first via InitRegistry()")
@@ -112,7 +122,7 @@ def ConnectRegistry(computer_name: Optional[str], key: Literal[_HKEY_MAPPING.key
         key_str = _HKEY_MAPPING[key]
         element = __registry.find(f"./key[@name='{key_str}']")
         if element is None:
-            raise OSError(f"Registry does not contain {key_str} key")
+            raise OSError(f"Registry does not contain '{key_str}' key")
         return PyHKEY(element)
     except KeyError as e:
         raise OSError("Handle is invalid") from e
@@ -126,10 +136,12 @@ def OpenKey(key: PyHKEY, sub_key: str, reserved = 0, access: Literal[_ACCESS_RIG
         raise RuntimeError("Please initialize the registry first via InitRegistry()")
 
     try:
+        if sub_key == "":
+            return PyHKEY(key.element)
         xpath = "/".join(f"key[@name='{sk}']" for sk in sub_key.split(_SEPARATOR))
         element = key.element.find(xpath)
         if element is None:
-            raise OSError(f"Registry does not contain {sub_key} path under provided key")
+            raise OSError(f"Registry does not contain '{sub_key}' path under provided key")
         return PyHKEY(element)
     except OSError as e:
         raise e
@@ -241,5 +253,11 @@ if __name__ == "__main__":
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 with self.assertRaises(OSError):
                     key = OpenKey(root_key_handle, r"NoSuchKey")
+
+        def test_empty_subkey(self):
+            with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
+                handle1 = OpenKey(root_key_handle, "")
+                self.assertEqual(root_key_handle, handle1)
+                
 
     unittest.main()

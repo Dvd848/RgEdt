@@ -1,0 +1,193 @@
+<registry>
+    <key name='HKEY_CLASSES_ROOT'>
+        <key name='.386'>
+            <key name='PersistentHandler'>
+                <value name='' data='{b4443acf-4e78-4dd9-900f-fe24b91797ed}' type='REG_SZ' />
+            </key>
+            <value name='' data='vxdfile' type='REG_SZ' />
+            <value name='PerceivedType' data='system' type='REG_SZ' />
+        </key>
+        <key name='.486'>
+            <key name='PersistentHandler'>
+                <value name='' data='{017c7492-9e90-4095-b4c8-6940fa3c5852}' type='REG_SZ' />
+            </key>
+            <value name='' data='vxdfile' type='REG_SZ' />
+            <value name='PerceivedType' data='system' type='REG_SZ' />
+        </key>
+        <key name='.txt'>
+            <key name='PersistentHandler'>
+                <value name='' data='{0635924f-f997-47a2-a51e-e154981e1e8b}' type='REG_SZ' />
+            </key>
+            <key name='ShellNew'>
+                <value name='ItemName' data='@%SystemRoot%\system32\notepad.exe,-470' type='REG_EXPAND_SZ' />
+                <value name='NullFile' data='' type='REG_SZ' />
+            </key>
+            <value name='Content Type' data='text/plain' type='REG_SZ' />
+            <value name='PerceivedType' data='text' type='REG_SZ' />
+            <value name='' data='txtfile' type='REG_SZ' />
+        </key>
+    </key>
+    <key name='HKEY_CURRENT_USER'>
+        <key name='SOFTWARE'>
+            <key name='Python'>
+                <key name='PythonCore'>
+                    <key name='3.6'>
+                        <key name='Idle'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python36\Lib\idlelib\idle.pyw' type='REG_SZ' />
+                        </key>
+                        <key name='IdleShortcuts'>
+                            <value name='' data='1' type='REG_DWORD_LITTLE_ENDIAN' />
+                        </key>
+                        <key name='InstalledFeatures'>
+                            <value name='dev' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='Shortcuts' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='exe' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='lib' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='test' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='doc_shortcut' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='doc' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='tools' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='tcltk' data='3.6.5150.0' type='REG_SZ' />
+                            <value name='pip' data='3.6.5150.0' type='REG_SZ' />
+                        </key>
+                        <key name='PythonPath'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python36\Lib\;C:\Users\User\AppData\Local\Programs\Python\Python36\DLLs\' type='REG_SZ' />
+                        </key>
+                    </key>
+                    <key name='3.7'>
+                        <key name='Help'>
+                            <key name='Main Python Documentation'>
+                                <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python37\Doc\python374.chm' type='REG_SZ' />
+                            </key>
+                        </key>
+                        <key name='Idle'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python37\Lib\idlelib\idle.pyw' type='REG_SZ' />
+                        </key>
+                        <key name='IdleShortcuts'>
+                            <value name='' data='1' type='REG_DWORD_LITTLE_ENDIAN' />
+                        </key>
+                        <key name='InstalledFeatures'>
+                            <value name='dev' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='Shortcuts' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='exe' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='lib' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='test' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='doc_shortcut' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='doc' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='tools' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='tcltk' data='3.7.4150.0' type='REG_SZ' />
+                            <value name='pip' data='3.7.4150.0' type='REG_SZ' />
+                        </key>
+                        <key name='InstallPath'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python37\' type='REG_SZ' />
+                            <value name='ExecutablePath' data='C:\Users\User\AppData\Local\Programs\Python\Python37\python.exe' type='REG_SZ' />
+                            <value name='WindowedExecutablePath' data='C:\Users\User\AppData\Local\Programs\Python\Python37\pythonw.exe' type='REG_SZ' />
+                        </key>
+                        <key name='PythonPath'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python37\Lib\;C:\Users\User\AppData\Local\Programs\Python\Python37\DLLs\' type='REG_SZ' />
+                        </key>
+                        <value name='DisplayName' data='Python 3.7 (64-bit)' type='REG_SZ' />
+                        <value name='SupportUrl' data='http://www.python.org/' type='REG_SZ' />
+                        <value name='Version' data='3.7.4' type='REG_SZ' />
+                        <value name='SysVersion' data='3.7' type='REG_SZ' />
+                        <value name='SysArchitecture' data='64bit' type='REG_SZ' />
+                    </key>
+                    <key name='3.8'>
+                        <key name='Help'>
+                            <key name='Main Python Documentation'>
+                                <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python38\Doc\python380.chm' type='REG_SZ' />
+                            </key>
+                        </key>
+                        <key name='Idle'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python38\Lib\idlelib\idle.pyw' type='REG_SZ' />
+                        </key>
+                        <key name='IdleShortcuts'>
+                            <value name='' data='1' type='REG_DWORD_LITTLE_ENDIAN' />
+                        </key>
+                        <key name='InstalledFeatures'>
+                            <value name='dev' data='3.8.150.0' type='REG_SZ' />
+                            <value name='Shortcuts' data='3.8.150.0' type='REG_SZ' />
+                            <value name='exe' data='3.8.150.0' type='REG_SZ' />
+                            <value name='lib' data='3.8.150.0' type='REG_SZ' />
+                            <value name='test' data='3.8.150.0' type='REG_SZ' />
+                            <value name='doc_shortcut' data='3.8.150.0' type='REG_SZ' />
+                            <value name='doc' data='3.8.150.0' type='REG_SZ' />
+                            <value name='tools' data='3.8.150.0' type='REG_SZ' />
+                            <value name='tcltk' data='3.8.150.0' type='REG_SZ' />
+                            <value name='pip' data='3.8.150.0' type='REG_SZ' />
+                        </key>
+                        <key name='InstallPath'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python38\' type='REG_SZ' />
+                            <value name='ExecutablePath' data='C:\Users\User\AppData\Local\Programs\Python\Python38\python.exe' type='REG_SZ' />
+                            <value name='WindowedExecutablePath' data='C:\Users\User\AppData\Local\Programs\Python\Python38\pythonw.exe' type='REG_SZ' />
+                        </key>
+                        <key name='PythonPath'>
+                            <value name='' data='C:\Users\User\AppData\Local\Programs\Python\Python38\Lib\;C:\Users\User\AppData\Local\Programs\Python\Python38\DLLs\' type='REG_SZ' />
+                        </key>
+                        <value name='DisplayName' data='Python 3.8 (64-bit)' type='REG_SZ' />
+                        <value name='SupportUrl' data='http://www.python.org/' type='REG_SZ' />
+                        <value name='Version' data='3.8.0' type='REG_SZ' />
+                        <value name='SysVersion' data='3.8' type='REG_SZ' />
+                        <value name='SysArchitecture' data='64bit' type='REG_SZ' />
+                    </key>
+                    <value name='DisplayName' data='Python Software Foundation' type='REG_SZ' />
+                    <value name='SupportUrl' data='http://www.python.org/' type='REG_SZ' />
+                </key>
+            </key>
+        </key>
+    </key>
+    <key name='HKEY_LOCAL_MACHINE'>
+        <key name='SOFTWARE'>
+            <key name='Python'>
+                <key name='PythonCore'>
+                    <key name='2.7'>
+                        <key name='Help'>
+                            <key name='Main Python Documentation'>
+                                <value name='' data='C:\Python27\Doc\python2716.chm' type='REG_SZ' />
+                            </key>
+                        </key>
+                        <key name='InstallPath'>
+                            <key name='InstallGroup'>
+                                <value name='' data='Python 2.7' type='REG_SZ' />
+                            </key>
+                            <value name='' data='C:\Python27\' type='REG_SZ' />
+                        </key>
+                        <key name='Modules'>
+
+                        </key>
+                        <key name='PythonPath'>
+                            <value name='' data='C:\Python27\Lib;C:\Python27\DLLs;C:\Python27\Lib\lib-tk' type='REG_SZ' />
+                        </key>
+                    </key>
+                </key>
+            </key>
+        </key>
+        <key name='SYSTEM'>
+            <key name='CurrentControlSet'>
+                <key name='Control'>
+                    <key name='USB'>
+                        <key name='AutomaticSurpriseRemoval'>
+                            <value name='AttemptRecoveryFromUsbPowerDrain' data='1' type='REG_DWORD_LITTLE_ENDIAN' />
+                        </key>
+                        <key name='ceip'>
+                            <value name='HIDAPIUsage' data='0' type='REG_DWORD_LITTLE_ENDIAN' />
+                            <value name='HIDCCUsage' data='0' type='REG_DWORD_LITTLE_ENDIAN' />
+                            <value name='APIUsage' data='0' type='REG_DWORD_LITTLE_ENDIAN' />
+                            <value name='UsbInformation' data='0' type='REG_DWORD_LITTLE_ENDIAN' />
+                            <value name='UsbCeipTaskLastRunTimestamp' data='132539146943011038' type='REG_QWORD_LITTLE_ENDIAN' />
+                        </key>
+                        <value name='DualRoleFeatures' data='1' type='REG_DWORD_LITTLE_ENDIAN' />
+                        <value name='OsDefaultRoleSwitchMode' data='6' type='REG_DWORD_LITTLE_ENDIAN' />
+                    </key>
+                </key>
+            </key>
+        </key>
+    </key>
+    <key name='HKEY_CURRENT_CONFIG'>
+        <key name='Software'>
+            <key name='Fonts'>
+                <value name='LogPixels' data='96' type='REG_DWORD_LITTLE_ENDIAN' />
+            </key>
+        </key>
+    </key>
+</registry>
