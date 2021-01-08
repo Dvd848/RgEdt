@@ -96,10 +96,10 @@ class TestModel(unittest.TestCase):
     def test_path_of_three(self):
         self.path_len_test(r"HKEY_CURRENT_CONFIG\Software\Fonts")
         
-        
-
-
-
+    def test_abbreviation (self):
+        tree1 = self.model.get_registry_tree([r"HKCR\.386"])
+        tree2 = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386"])
+        self.assertEqual(tree1, tree2)
 
 # From root folder:
 #   python -m unittest rgedt.tests.test_model

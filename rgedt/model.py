@@ -121,18 +121,12 @@ class RegistryKey(object):
 class Model(object):
     PATH_SEPARATOR = "\\"
 
-    _ROOT_KEY_STR_TO_ENUM = {
-        "HKEY_CLASSES_ROOT"     : winreg.HKEY_CLASSES_ROOT,
-        "HKCR"                  : winreg.HKEY_CLASSES_ROOT,
-        "HKEY_CURRENT_USER"     : winreg.HKEY_CURRENT_USER,
-        "HKCU"                  : winreg.HKEY_CURRENT_USER,
-        "HKEY_LOCAL_MACHINE"    : winreg.HKEY_LOCAL_MACHINE,
-        "HKLM"                  : winreg.HKEY_LOCAL_MACHINE,
-        "HKEY_USERS"            : winreg.HKEY_USERS,
-        "HKU"                   : winreg.HKEY_USERS,
-        "HKEY_PERFORMANCE_DATA" : winreg.HKEY_PERFORMANCE_DATA,
-        "HKEY_CURRENT_CONFIG"   : winreg.HKEY_CURRENT_CONFIG,
-        "HKCC"                  : winreg.HKEY_CURRENT_CONFIG
+    _ROOT_KEY_SHORT = {
+        "HKCR"                  : "HKEY_CLASSES_ROOT",
+        "HKCU"                  : "HKEY_CURRENT_USER",
+        "HKLM"                  : "HKEY_LOCAL_MACHINE",
+        "HKU"                   : "HKEY_USERS",
+        "HKCC"                  : "HKEY_CURRENT_CONFIG"
     }
 
     def __init__(self, **config):
@@ -155,6 +149,8 @@ class Model(object):
 
         # First key in path:
         root_key_str = key_path.pop(0)
+        if root_key_str in self._ROOT_KEY_SHORT.keys():
+            root_key_str = self._ROOT_KEY_SHORT[root_key_str]
         root_key_const = self._root_key_name_to_value(root_key_str)
         root_key = RegistryKey(name = root_key_str)
 
@@ -189,6 +185,7 @@ class Model(object):
     def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None):
         if current_key_name is None:
             current_key_name = current_key.name
+            
         with winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
             num_sub_keys, num_values, _ = winreg.QueryInfoKey(sub_key_handle)
             for i in range(num_sub_keys):
@@ -203,13 +200,6 @@ class Model(object):
 
     @classmethod
     def _root_key_name_to_value(cls, root_key: str): 
-        # TODO: Handle short names
-        
-        #try:
-        #    return cls._ROOT_KEY_STR_TO_ENUM[root_key]
-        #except KeyError as e:
-        #    raise RgEdtException(f"Can't find registry key root for {root_key}") from e
-
         try:
             return getattr(winreg, root_key)
         except AttributeError as e:
