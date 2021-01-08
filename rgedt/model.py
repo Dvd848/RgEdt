@@ -74,8 +74,22 @@ class RegistryKey(object):
         self.sub_keys: Dict[str, RegistryKey] = {}
         self.values:   Dict[str, RegistryValue] = {}
 
-    def add_sub_key(self, sub_key: 'RegistryKey'):
+    def _add_sub_key(self, sub_key: 'RegistryKey'):
+        name_lower = sub_key.name.lower()
+        if name_lower in self.sub_keys:
+            raise RuntimeError(f"Error: {name_lower} already exists in {self.name}")
         self.sub_keys[sub_key.name.lower()] = sub_key
+
+    def get_sub_key(self, sub_key_name: str, create_if_missing: bool = False):
+        try:
+            return self.sub_keys[sub_key_name.lower()]
+        except KeyError:
+            if create_if_missing:
+                new_key = RegistryKey(name = sub_key_name)
+                self._add_sub_key(new_key)
+                return new_key
+            else:
+                raise KeyError(f"Key '{self.name} does not contain subkey '{sub_key_name}'")
 
     def add_value(self, value: RegistryValue):
         self.values[value.name.lower()] = value
@@ -104,7 +118,7 @@ class RegistryKey(object):
         name = xml_element.get("name")
         key = cls(name)
         for subkey in xml_element.findall("key"):
-            key.add_sub_key(cls.from_xml(subkey))
+            key._add_sub_key(cls.from_xml(subkey))
         for value in xml_element.findall("value"):
             key.add_value(RegistryValue.from_xml(value))
         return key
@@ -133,48 +147,47 @@ class Model(object):
         #self.ignore_empty_keys  = config.get("ignore_empty_keys", True) # TODO Use
         self.computer_name      = config.get("computer_name", None)
 
-    def get_registry_tree(self, keys: List[str]) -> dict:
-        res = RegistryKey(name = "Computer")
+    def get_registry_tree(self, key_paths: List[str]) -> dict:
+        computer = RegistryKey(name = "Computer")
 
         try:
-            for key in keys:
-                res.add_sub_key(self._build_key_structure(key))
+            for key_path in key_paths:
+                self._build_key_structure(computer, key_path)
         except Exception as e:
             raise RuntimeError("Failed to retrieve registry tree") from e
 
-        return res
+        return computer
 
-    def _build_key_structure(self, key: str):
-        key_path = key.split(self.PATH_SEPARATOR)
+    def _build_key_structure(self, computer: RegistryKey, key_path: str):
+        keys_in_path = key_path.split(self.PATH_SEPARATOR)
 
         # First key in path:
-        root_key_str = key_path.pop(0)
+        root_key_str = keys_in_path.pop(0)
         if root_key_str in self._ROOT_KEY_SHORT.keys():
             root_key_str = self._ROOT_KEY_SHORT[root_key_str]
-        root_key_const = self._root_key_name_to_value(root_key_str)
-        root_key = RegistryKey(name = root_key_str)
 
-        if len(key_path) > 0: # Path consists of more than just root key
+        root_key = computer.get_sub_key(root_key_str, create_if_missing = True)
+        root_key_const = self._root_key_name_to_value(root_key_str)
+
+        if len(keys_in_path) > 0: # Path consists of more than just root key
 
             # Last key in path:
-            leaf_key_str = key_path.pop() if len(key_path) > 0 else ""
+            leaf_key_str = keys_in_path.pop() if len(keys_in_path) > 0 else ""
 
             # Anything in the middle (if exists)
-            middle_path = self.PATH_SEPARATOR.join(key_path)
+            middle_path = self.PATH_SEPARATOR.join(keys_in_path)
             
             current_key = root_key
-            for middle_key_str in key_path:
-                middle_key = RegistryKey(name = middle_key_str)
-                current_key.add_sub_key(middle_key)
+            for middle_key_str in keys_in_path:
+                middle_key = current_key.get_sub_key(middle_key_str, create_if_missing = True)
                 current_key = middle_key
 
             # current_key now represents the key before the last one
 
             with winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
                 with winreg.OpenKey(root_key_handle, middle_path) as sub_key_handle:
-                    leaf_key = RegistryKey(name = leaf_key_str)
+                    leaf_key = current_key.get_sub_key(leaf_key_str, create_if_missing = True)
                     self._build_subkey_structure(sub_key_handle, leaf_key)
-                    current_key.add_sub_key(leaf_key)
                     
         else: # Corner case: Path consists of just one key (root key)
             with winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
@@ -189,9 +202,8 @@ class Model(object):
         with winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
             num_sub_keys, num_values, _ = winreg.QueryInfoKey(sub_key_handle)
             for i in range(num_sub_keys):
-                new_key = RegistryKey(name = winreg.EnumKey(sub_key_handle, i))
+                new_key = current_key.get_sub_key(winreg.EnumKey(sub_key_handle, i), create_if_missing = True)
                 self._build_subkey_structure(sub_key_handle, new_key)
-                current_key.add_sub_key(new_key)
             for i in range(num_values):
                 name, value, key_type = winreg.EnumValue(sub_key_handle, i)
                 val_obj = RegistryValue(name = name, data = value, data_type = key_type)

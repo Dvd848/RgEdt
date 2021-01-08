@@ -101,6 +101,50 @@ class TestModel(unittest.TestCase):
         tree2 = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386"])
         self.assertEqual(tree1, tree2)
 
+    def test_two_paths_basic (self):
+        tree = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386", r"HKEY_CURRENT_CONFIG\Software"])
+        expected_xml = """
+            <key name='Computer'>
+                <key name='HKEY_CLASSES_ROOT'>
+                    <key name='.386'>
+                        <key name='PersistentHandler'>
+                            <value name='' data='{b4443acf-4e78-4dd9-900f-fe24b91797ed}' type='REG_SZ' />
+                        </key>
+                        <value name='' data='vxdfile' type='REG_SZ' />
+                        <value name='PerceivedType' data='system' type='REG_SZ' />
+                    </key>
+                </key>
+                <key name='HKEY_CURRENT_CONFIG'>
+                    <key name='Software'>
+                        <key name='Fonts'>
+                            <value name='LogPixels' data='96' type='REG_DWORD_LITTLE_ENDIAN' />
+                        </key>
+                    </key>
+                </key>
+            </key>
+        """
+        self.assertEqual(self.xml_to_key(expected_xml), tree)
+        
+    def test_two_converging_paths (self):
+        tree = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.486\PersistentHandler"])
+        expected_xml = """
+            <key name='Computer'>
+                <key name='HKEY_CLASSES_ROOT'>
+                    <key name='.386'>
+                        <key name='PersistentHandler'>
+                            <value name='' data='{b4443acf-4e78-4dd9-900f-fe24b91797ed}' type='REG_SZ' />
+                        </key>
+                    </key>
+                    <key name='.486'>
+                        <key name='PersistentHandler'>
+                            <value name='' data='{017c7492-9e90-4095-b4c8-6940fa3c5852}' type='REG_SZ' />
+                        </key>
+                    </key>
+                </key>
+            </key>
+        """
+        self.assertEqual(self.xml_to_key(expected_xml), tree)
+
 # From root folder:
 #   python -m unittest rgedt.tests.test_model
 #   python -m rgedt.tests.test_model
