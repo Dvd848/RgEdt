@@ -9,14 +9,12 @@ import re
 
 from .common import *
 
-#RegistryValue = namedtuple("RegistryValue", "name value key_type")
-
 class RegistryValue:
 
-    _data_types = ["REG_BINARY", "REG_DWORD", "REG_DWORD_LITTLE_ENDIAN", "REG_DWORD_BIG_ENDIAN", 
-                 "REG_EXPAND_SZ", "REG_LINK", "REG_MULTI_SZ", "REG_NONE", "REG_QWORD", 
-                 "REG_QWORD_LITTLE_ENDIAN", "REG_RESOURCE_LIST", "REG_FULL_RESOURCE_DESCRIPTOR", 
-                 "REG_RESOURCE_REQUIREMENTS_LIST", "REG_SZ"]
+    _data_types = [ "REG_BINARY", "REG_DWORD", "REG_DWORD_LITTLE_ENDIAN", "REG_DWORD_BIG_ENDIAN", 
+                    "REG_EXPAND_SZ", "REG_LINK", "REG_MULTI_SZ", "REG_NONE", "REG_QWORD", 
+                    "REG_QWORD_LITTLE_ENDIAN", "REG_RESOURCE_LIST", "REG_FULL_RESOURCE_DESCRIPTOR", 
+                    "REG_RESOURCE_REQUIREMENTS_LIST", "REG_SZ"]
     _data_type_mapping: Dict[int, str] = {}
 
     def __init__(self, name, data, data_type):
@@ -67,6 +65,7 @@ class RegistryValue:
 
     def __hash__(self):
         return hash((self.name.lower(), self.data, self.data_type))
+
 
 class RegistryKey(object):
 
@@ -133,8 +132,6 @@ class RegistryKey(object):
 
         return ( (self.sub_keys == other.sub_keys) and (self.values == other.values) )
         
-
-    
 
 class Model(object):
     PATH_SEPARATOR = "\\"
