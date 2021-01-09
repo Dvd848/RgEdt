@@ -145,6 +145,57 @@ class TestModel(unittest.TestCase):
         """
         self.assertEqual(self.xml_to_key(expected_xml), tree)
 
+    def test_path_containing_other_path (self):
+        expected_xml = """
+            <key name='Computer'>
+                <key name='HKEY_CLASSES_ROOT'>
+                    <key name='.386'>
+                        <key name='PersistentHandler'>
+                            <value name='' data='{b4443acf-4e78-4dd9-900f-fe24b91797ed}' type='REG_SZ' />
+                        </key>
+                        <value name='' data='vxdfile' type='REG_SZ' />
+                        <value name='PerceivedType' data='system' type='REG_SZ' />
+                    </key>
+                </key>
+            </key>
+        """
+        for path in [
+            [r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.386"],
+            [r"HKEY_CLASSES_ROOT\.386", r"HKEY_CLASSES_ROOT\.386\PersistentHandler"]
+        ]:
+            tree = self.model.get_registry_tree(path)
+            self.assertEqual(self.xml_to_key(expected_xml), tree)
+
+    def test_remove_contained_paths(self):
+        paths = [r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.386",
+                 r"HKEY_CLASSES_ROOT\.486", r"HKEY_CLASSES_ROOT\.486\PersistentHandler"]
+
+        expected = set([r"HKEY_CLASSES_ROOT\.386", r"HKEY_CLASSES_ROOT\.486"])
+
+        res = self.model._remove_contained_paths(paths)
+
+        self.assertEqual(expected, res)
+
+    def test_remove_contained_paths_short(self):
+        paths = [r"HKCR\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.386",
+                 r"HKEY_CLASSES_ROOT\.486", r"HKEY_CLASSES_ROOT\.486\PersistentHandler"]
+
+        expected = set([r"HKEY_CLASSES_ROOT\.386", r"HKEY_CLASSES_ROOT\.486"])
+
+        res = self.model._remove_contained_paths(paths)
+
+        self.assertEqual(expected, res)
+
+    def test_remove_contained_paths_different_hives(self):
+        paths = [r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.386", r"HKEY_CLASSES_ROOT",
+                 r"HKEY_CURRENT_USER\SOFTWARE\Python\PythonCore\3.6", r"HKEY_CURRENT_USER\SOFTWARE\Python"]
+
+        expected = set([r"HKEY_CLASSES_ROOT", r"HKEY_CURRENT_USER\SOFTWARE\Python"])
+
+        res = self.model._remove_contained_paths(paths)
+
+        self.assertEqual(expected, res)
+
 # From root folder:
 #   python -m unittest rgedt.tests.test_model
 #   python -m rgedt.tests.test_model

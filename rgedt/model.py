@@ -1,10 +1,11 @@
-from typing import List, Tuple, Dict, Union, Optional
+from typing import List, Tuple, Dict, Union, Optional, Set
 from pprint import pprint as pp
 from collections import UserDict
 from collections import namedtuple
 from dataclasses import dataclass
 import textwrap
 import winreg
+import re
 
 from .common import *
 
@@ -77,7 +78,7 @@ class RegistryKey(object):
     def _add_sub_key(self, sub_key: 'RegistryKey'):
         name_lower = sub_key.name.lower()
         if name_lower in self.sub_keys:
-            raise RuntimeError(f"Error: {name_lower} already exists in {self.name}")
+            raise RuntimeError(f"Error: '{name_lower}' already exists in '{self.name}'")
         self.sub_keys[sub_key.name.lower()] = sub_key
 
     def get_sub_key(self, sub_key_name: str, create_if_missing: bool = False):
@@ -92,7 +93,10 @@ class RegistryKey(object):
                 raise KeyError(f"Key '{self.name} does not contain subkey '{sub_key_name}'")
 
     def add_value(self, value: RegistryValue):
-        self.values[value.name.lower()] = value
+        name_lower = value.name.lower()
+        if name_lower in self.values:
+            raise RuntimeError(f"Error: '{name_lower}' already exists in '{self.name}'")
+        self.values[name_lower] = value
 
     def __str__(self):
         res = "{} {{\n".format(self.name)
@@ -143,22 +147,26 @@ class Model(object):
         "HKCC"                  : "HKEY_CURRENT_CONFIG"
     }
 
+    _ROOT_KEY_SHORT_REGEX =  re.compile("^(" + r")|^(".join(_ROOT_KEY_SHORT.keys()) + ")")
+
     def __init__(self, **config):
         #self.ignore_empty_keys  = config.get("ignore_empty_keys", True) # TODO Use
         self.computer_name      = config.get("computer_name", None)
 
-    def get_registry_tree(self, key_paths: List[str]) -> dict:
+    def get_registry_tree(self, key_paths: List[str]) -> RegistryKey:
         computer = RegistryKey(name = "Computer")
 
+        reduced_key_paths = self._remove_contained_paths(key_paths)
+
         try:
-            for key_path in key_paths:
+            for key_path in reduced_key_paths:
                 self._build_key_structure(computer, key_path)
         except Exception as e:
             raise RuntimeError("Failed to retrieve registry tree") from e
 
         return computer
 
-    def _build_key_structure(self, computer: RegistryKey, key_path: str):
+    def _build_key_structure(self, computer: RegistryKey, key_path: str) -> RegistryKey:
         keys_in_path = key_path.split(self.PATH_SEPARATOR)
 
         # First key in path:
@@ -195,7 +203,7 @@ class Model(object):
         
         return root_key
 
-    def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None):
+    def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None) -> None:
         if current_key_name is None:
             current_key_name = current_key.name
             
@@ -211,9 +219,30 @@ class Model(object):
         
 
     @classmethod
-    def _root_key_name_to_value(cls, root_key: str): 
+    def _root_key_name_to_value(cls, root_key: str) -> int: 
         try:
             return getattr(winreg, root_key)
         except AttributeError as e:
             raise RgEdtException(f"Can't find registry key root for {root_key}") from e
+
+    @classmethod
+    def _remove_contained_paths(cls, key_paths: List[str]) -> Set[str]:
+        def expand_root_key(match):
+            return cls._ROOT_KEY_SHORT.get(match.group(1), match.group(1))
+
+        expanded_key_paths = []
+
+        for key_path in key_paths:
+            expanded_key_paths.append(cls._ROOT_KEY_SHORT_REGEX.sub(expand_root_key, key_path))
+
+        sorted_paths = list(sorted(expanded_key_paths))
+        res = set()
+
+        while (len(sorted_paths) > 0):
+            current_path = sorted_paths.pop(0)
+            res.add(current_path)
+            while ( (len(sorted_paths) > 0) and (sorted_paths[0].startswith(current_path)) ):
+                sorted_paths.pop(0)
+
+        return res
 
