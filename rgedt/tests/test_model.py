@@ -5,8 +5,10 @@ import xml.etree.ElementTree as ET
 
 from . import winreg_mock
 from .. import model
+from .. import common
 
-patcher = patch(model.__name__ + ".winreg", winreg_mock).start()
+for module in [model, common]:
+    patch(module.__name__ + ".winreg", winreg_mock).start()
 
 class TestModel(unittest.TestCase):
 
