@@ -9,7 +9,7 @@ class Application(tk.Tk):
 
         self.title("RgEdt")
         self.resizable(width = True, height = True)
-        self.geometry('640x480')
+        self.geometry('1280x720')
 
         self.view = v.View(self)
         self.model = m.Model()

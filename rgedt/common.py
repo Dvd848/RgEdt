@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Union, Optional, Set
+
 import textwrap
 import winreg
 
@@ -30,6 +31,10 @@ class RegistryValue:
     def data_type(self):
         return self._data_type
 
+    @property
+    def data_type_str(self):
+        return self._data_type_value_to_name(self.data_type)
+
     @classmethod
     def _data_type_value_to_name(cls, data_type_val):
         if len(cls._data_type_mapping) == 0:
@@ -45,10 +50,10 @@ class RegistryValue:
             raise RgEdtException(f"Can't find value for {data_type_name}") from e
 
     def __str__(self):
-        return f"RegistryValue {{ name = '{self.name}', data = '{self.data}', type = '{self._data_type_value_to_name(self.data_type)}' }} "
+        return f"RegistryValue {{ name = '{self.name}', data = '{self.data}', type = '{self.data_type_str}' }} "
 
     def to_xml(self) -> str:
-        return f"<value name='{self.name}' data='{str(self.data)}' type='{self._data_type_value_to_name(self.data_type)}' />"
+        return f"<value name='{self.name}' data='{str(self.data)}' type='{self.data_type_str}' />"
 
     @classmethod
     def from_xml(cls, xml_element):
@@ -65,10 +70,11 @@ class RegistryValue:
 
 class RegistryKey(object):
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self._sub_keys: Dict[str, RegistryKey] = {}
         self._values:   Dict[str, RegistryValue] = {}
+        self._is_explicit = False
 
     @property
     def sub_keys(self):
@@ -77,6 +83,26 @@ class RegistryKey(object):
     @property
     def values(self):
         return self._values.values()
+
+    @property
+    def is_explicit(self):
+        """ 
+        True iff this key was explicitly requested in the user filter.
+        
+        A key is considered explicit if it is the leaf key of a user filter or 
+        anything under it.
+
+        For example, given a registry path of 'HKEY_LOCAL_MACHINE\SOFTWARE\Python',
+        The 'Python' key and any key under it are considered explicit, 
+        while 'HKEY_LOCAL_MACHINE' and 'SOFTWARE' are considered implicit.
+        """
+        return self._is_explicit
+
+    @is_explicit.setter
+    def is_explicit(self, value):
+        if not value in [True, False]:
+            raise ValueError("is_explicit must be boolean!")
+        self._is_explicit = value
 
     def _add_sub_key(self, sub_key: 'RegistryKey'):
         name_lower = sub_key.name.lower()

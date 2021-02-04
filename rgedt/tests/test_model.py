@@ -10,6 +10,11 @@ from .. import common
 for module in [model, common]:
     patch(module.__name__ + ".winreg", winreg_mock).start()
 
+def _traverse_keys(root: common.RegistryKey):
+    for subkey in root.sub_keys:
+        yield subkey
+        yield from _traverse_keys(subkey)
+
 class TestModel(unittest.TestCase):
 
     @classmethod
@@ -197,6 +202,14 @@ class TestModel(unittest.TestCase):
         res = self.model._remove_contained_paths(paths)
 
         self.assertEqual(expected, res)
+
+    def test_explicit_keys(self):
+        tree = self.model.get_registry_tree([r"HKEY_LOCAL_MACHINE\SOFTWARE\Python\PythonCore\2.7\InstallPath"])
+        expilcit_key_names = ["InstallPath", "InstallGroup"]
+        for key in _traverse_keys(tree):
+            self.assertEqual(key.is_explicit, key.name in expilcit_key_names)
+                
+
 
 # From root folder:
 #   python -m unittest rgedt.tests.test_model

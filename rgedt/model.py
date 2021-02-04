@@ -80,6 +80,8 @@ class Model(object):
     def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None) -> None:
         if current_key_name is None:
             current_key_name = current_key.name
+
+        current_key.is_explicit = True
             
         with winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
             num_sub_keys, num_values, _ = winreg.QueryInfoKey(sub_key_handle)
