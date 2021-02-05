@@ -2,7 +2,6 @@ from typing import Literal, Optional, Tuple
 from collections import namedtuple
 import xml.etree.ElementTree as ET
 
-
 # Constants
 
 ## HKEY_* Constants

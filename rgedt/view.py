@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 from collections import namedtuple
 
+from . import registry
+
 from .common import *
 
 TreeItemValues = namedtuple("TreeItemValues", "id")
@@ -28,12 +30,15 @@ class View(tk.Frame):
 
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         self.details_view.reset()
         self.keys_view.reset()
 
     def set_registry_keys(self, root_key: RegistryKey) -> None:
         self.keys_view.build_registry_tree(root_key, '')
+
+    def enable_test_mode(self) -> None:
+        self.keys_view.enable_test_mode()
 
 class RegistryDetailsView():
     def __init__(self, parent):
@@ -62,6 +67,7 @@ class RegistryDetailsView():
 
 class RegistryKeysView():
     def __init__(self, parent, registry_key_map: Dict[int, RegistryKey], details_view: RegistryDetailsView):
+        self.parent = parent
         self.registry_key_map = registry_key_map
         self.details_view = details_view
 
@@ -113,11 +119,16 @@ class RegistryKeysView():
             values = registry_key.values
 
             if (registry_key.is_explicit and len(values) == 0):
-                values = [RegistryValue('', '', winreg.REG_SZ)]
+                values = [RegistryValue('', '', registry.winreg.REG_SZ)]
 
             for value in values:
                 self.details_view.add_entry(value.name, value.data, value.data_type_str)
  
         except IndexError:
             pass
+
+    def enable_test_mode(self):
+        style = ttk.Style(self.parent)
+        background = "#fcf5d8"
+        style.configure("Treeview", background=background, fieldbackground=background)
 

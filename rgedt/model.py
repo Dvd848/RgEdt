@@ -4,9 +4,9 @@ from collections import UserDict
 from collections import namedtuple
 from dataclasses import dataclass
 import textwrap
-import winreg
 import re
 
+from . import registry
 from .common import *
         
 
@@ -66,13 +66,13 @@ class Model(object):
 
             # current_key now represents the key before the last one
 
-            with winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
-                with winreg.OpenKey(root_key_handle, middle_path) as sub_key_handle:
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, middle_path) as sub_key_handle:
                     leaf_key = current_key.get_sub_key(leaf_key_str, create_if_missing = True)
                     self._build_subkey_structure(sub_key_handle, leaf_key)
                     
         else: # Corner case: Path consists of just one key (root key)
-            with winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
                 self._build_subkey_structure(root_key_handle, root_key, "")
         
         return root_key
@@ -83,13 +83,13 @@ class Model(object):
 
         current_key.is_explicit = True
             
-        with winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
-            num_sub_keys, num_values, _ = winreg.QueryInfoKey(sub_key_handle)
+        with registry.winreg.OpenKey(base_key_handle, current_key_name) as sub_key_handle:
+            num_sub_keys, num_values, _ = registry.winreg.QueryInfoKey(sub_key_handle)
             for i in range(num_sub_keys):
-                new_key = current_key.get_sub_key(winreg.EnumKey(sub_key_handle, i), create_if_missing = True)
+                new_key = current_key.get_sub_key(registry.winreg.EnumKey(sub_key_handle, i), create_if_missing = True)
                 self._build_subkey_structure(sub_key_handle, new_key)
             for i in range(num_values):
-                name, value, key_type = winreg.EnumValue(sub_key_handle, i)
+                name, value, key_type = registry.winreg.EnumValue(sub_key_handle, i)
                 val_obj = RegistryValue(name = name, data = value, data_type = key_type)
                 current_key.add_value(val_obj)
         
@@ -97,7 +97,7 @@ class Model(object):
     @classmethod
     def _root_key_name_to_value(cls, root_key: str) -> int: 
         try:
-            return getattr(winreg, root_key)
+            return getattr(registry.winreg, root_key)
         except AttributeError as e:
             raise RgEdtException(f"Can't find registry key root for {root_key}") from e
 

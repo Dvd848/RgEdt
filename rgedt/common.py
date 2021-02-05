@@ -1,7 +1,7 @@
 from typing import List, Tuple, Dict, Union, Optional, Set
 
 import textwrap
-import winreg
+from . import registry
 
 class RgEdtException(Exception):
     pass
@@ -39,13 +39,13 @@ class RegistryValue:
     def _data_type_value_to_name(cls, data_type_val):
         if len(cls._data_type_mapping) == 0:
             # Mapping is created once upon first call to allow mocking winreg after module import
-            cls._data_type_mapping = {getattr(winreg, name): name for name in cls._data_types} 
+            cls._data_type_mapping = {getattr(registry.winreg, name): name for name in cls._data_types} 
         return cls._data_type_mapping[data_type_val]
 
     @classmethod
     def _data_type_name_to_value(cls, data_type_name):
         try:
-            return getattr(winreg, data_type_name)
+            return getattr(registry.winreg, data_type_name)
         except AttributeError as e:
             raise RgEdtException(f"Can't find value for {data_type_name}") from e
 

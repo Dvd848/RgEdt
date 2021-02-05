@@ -3,12 +3,9 @@ from unittest.mock import patch
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-from . import winreg_mock
 from .. import model
 from .. import common
-
-for module in [model, common]:
-    patch(module.__name__ + ".winreg", winreg_mock).start()
+from .. import registry
 
 def _traverse_keys(root: common.RegistryKey):
     for subkey in root.sub_keys:
@@ -20,7 +17,7 @@ class TestModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         with open(Path(__file__).resolve().parent / "sample_registry.xml") as f:
-            model.winreg.InitRegistry(f.read())
+            registry.mock_winreg(f.read())
         
         cls.model = model.Model()
 
