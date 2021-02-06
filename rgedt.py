@@ -1,4 +1,3 @@
-from rgedt.application import Application
 import argparse
 from rgedt import registry
 
@@ -11,6 +10,9 @@ if __name__ == "__main__":
         with open(args.mock_registry) as f:
             registry.mock_winreg(f.read())
             assert(registry.winreg.__name__ == "rgedt.tests.winreg_mock")
+
+    # Import application after mocking winreg
+    from rgedt.application import Application
 
     app = Application()
     

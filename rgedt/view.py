@@ -6,8 +6,6 @@ from . import registry
 
 from .common import *
 
-TreeItemValues = namedtuple("TreeItemValues", "id")
-
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
 
@@ -41,15 +39,22 @@ class View(tk.Frame):
         self.keys_view.enable_test_mode()
 
 class RegistryDetailsView():
+    DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
+
     def __init__(self, parent):
+        self.parent = parent
+
         ColumnAttr = namedtuple("ColumnAttr", "name width")
 
         columns = (ColumnAttr('Name', 200), ColumnAttr('Type', 100), ColumnAttr('Data', 500))
         self.details = ttk.Treeview(parent, columns = columns, 
-                                    show = 'headings')
+                                    show = 'headings', selectmode = 'browse')
         for i, column in enumerate(columns):
             self.details.heading(f"#{i+1}", text = column.name, anchor = tk.W)
             self.details.column(f"#{i+1}", minwidth = 100, stretch = tk.NO, width = column.width, anchor = tk.W)
+
+        self.details.bind("<Double-Button-1>", self._change_value)
+        self.details.bind("<Return>", self._change_value)
 
         self.details.pack(side = tk.RIGHT)
 
@@ -63,9 +68,22 @@ class RegistryDetailsView():
     def add_entry(self, name, data, data_type):
         name = name or '(Default)'
         data = data or '(value not set)'
-        self.details.insert('', 'end', values = (name, data_type, data))  
+        self.details.insert('', 'end', values = self.DetailsItemValues(name, data_type, data))  
+
+    def _change_value(self, event):
+        try:
+            selected_item = self.details.selection()[0]
+            tree_item = self.details.item(selected_item)
+            tree_item_values = self.DetailsItemValues(*tree_item["values"])
+
+            change_value_window = ChangeValueView(self.parent, tree_item_values.data_type)
+
+        except IndexError:
+            pass
 
 class RegistryKeysView():
+    TreeItemValues = namedtuple("TreeItemValues", "id")
+
     def __init__(self, parent, registry_key_map: Dict[int, RegistryKey], details_view: RegistryDetailsView):
         self.parent = parent
         self.registry_key_map = registry_key_map
@@ -105,7 +123,7 @@ class RegistryKeysView():
         key_id = id(key)
         tag = EXPLICIT_TAG if key.is_explicit else IMPLICIT_TAG
         sub_tree = self.tree.insert(tree_parent, 'end', text = key.name, open = True, 
-                                    values = TreeItemValues(key_id), tags = (tag, ))
+                                    values = self.TreeItemValues(key_id), tags = (tag, ))
         self.registry_key_map[key_id] = key
         for subkey in key.sub_keys:
             self.build_registry_tree(subkey, sub_tree)
@@ -115,14 +133,14 @@ class RegistryKeysView():
             self.details_view.reset()
             selected_item = self.tree.selection()[0]
             tree_item = self.tree.item(selected_item)
-            registry_key = self.registry_key_map[TreeItemValues(*tree_item["values"]).id]
+            registry_key = self.registry_key_map[self.TreeItemValues(*tree_item["values"]).id]
             values = registry_key.values
 
             if (registry_key.is_explicit and len(values) == 0):
                 values = [RegistryValue('', '', registry.winreg.REG_SZ)]
 
             for value in values:
-                self.details_view.add_entry(value.name, value.data, value.data_type_str)
+                self.details_view.add_entry(value.name, value.data, value.data_type.name)
  
         except IndexError:
             pass
@@ -132,3 +150,16 @@ class RegistryKeysView():
         background = "#fcf5d8"
         style.configure("Treeview", background=background, fieldbackground=background)
 
+class ChangeValueView():
+    def __init__(self, parent, data_type):
+        self.parent = parent
+        self.data_type = data_type
+
+        self.window = tk.Toplevel(self.parent)
+        self.window.title("Edit Value") 
+        self.window.geometry("330x200") 
+        #self.window.attributes('-toolwindow', True)
+        self.window.resizable(0, 0)
+        self.window.transient(self.parent)
+        self.window.grab_set()
+        tk.Label(self.window, text ="This is a new window").pack() 

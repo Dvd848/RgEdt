@@ -1,4 +1,5 @@
 from typing import List, Tuple, Dict, Union, Optional, Set
+from enum import Enum
 
 import textwrap
 from . import registry
@@ -6,21 +7,38 @@ from . import registry
 class RgEdtException(Exception):
     pass
 
+class RegistryValueType(Enum):
+    REG_BINARY                              = registry.winreg.REG_BINARY
+    REG_DWORD                               = registry.winreg.REG_DWORD
+    REG_DWORD_LITTLE_ENDIAN                 = registry.winreg.REG_DWORD_LITTLE_ENDIAN
+    REG_DWORD_BIG_ENDIAN                    = registry.winreg.REG_DWORD_BIG_ENDIAN
+    REG_EXPAND_SZ                           = registry.winreg.REG_EXPAND_SZ
+    REG_LINK                                = registry.winreg.REG_LINK
+    REG_MULTI_SZ                            = registry.winreg.REG_MULTI_SZ
+    REG_NONE                                = registry.winreg.REG_NONE
+    REG_QWORD                               = registry.winreg.REG_QWORD
+    REG_QWORD_LITTLE_ENDIAN                 = registry.winreg.REG_QWORD_LITTLE_ENDIAN
+    REG_RESOURCE_LIST                       = registry.winreg.REG_RESOURCE_LIST
+    REG_FULL_RESOURCE_DESCRIPTOR            = registry.winreg.REG_FULL_RESOURCE_DESCRIPTOR
+    REG_RESOURCE_REQUIREMENTS_LIST          = registry.winreg.REG_RESOURCE_REQUIREMENTS_LIST
+    REG_SZ                                  = registry.winreg.REG_SZ
+
+
+
 class RegistryValue:
 
-    _data_types = [ "REG_BINARY", "REG_DWORD", "REG_DWORD_LITTLE_ENDIAN", "REG_DWORD_BIG_ENDIAN", 
-                    "REG_EXPAND_SZ", "REG_LINK", "REG_MULTI_SZ", "REG_NONE", "REG_QWORD", 
-                    "REG_QWORD_LITTLE_ENDIAN", "REG_RESOURCE_LIST", "REG_FULL_RESOURCE_DESCRIPTOR", 
-                    "REG_RESOURCE_REQUIREMENTS_LIST", "REG_SZ"]
-    _data_type_mapping: Dict[int, str] = {}
-
-    def __init__(self, name, data, data_type):
+    def __init__(self, name: str, data, data_type: int):
         self._name = name
         self._data = data
-        self._data_type = data_type
+
+        try:
+            RegistryValueType(data_type)
+            self._data_type_raw = data_type
+        except ValueError as e:
+            raise RgEdtException(f"Invalid data type: {data_type} for registry value {name}") from e
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
@@ -28,35 +46,24 @@ class RegistryValue:
         return self._data
 
     @property
-    def data_type(self):
-        return self._data_type
-
-    @property
-    def data_type_str(self):
-        return self._data_type_value_to_name(self.data_type)
+    def data_type(self) -> RegistryValueType:
+        return RegistryValueType(self._data_type_raw)
 
     @classmethod
-    def _data_type_value_to_name(cls, data_type_val):
-        if len(cls._data_type_mapping) == 0:
-            # Mapping is created once upon first call to allow mocking winreg after module import
-            cls._data_type_mapping = {getattr(registry.winreg, name): name for name in cls._data_types} 
-        return cls._data_type_mapping[data_type_val]
-
-    @classmethod
-    def _data_type_name_to_value(cls, data_type_name):
+    def _data_type_name_to_value(cls, data_type_name: str) -> int:
         try:
-            return getattr(registry.winreg, data_type_name)
+            return getattr(RegistryValueType, data_type_name).value
         except AttributeError as e:
             raise RgEdtException(f"Can't find value for {data_type_name}") from e
 
-    def __str__(self):
-        return f"RegistryValue {{ name = '{self.name}', data = '{self.data}', type = '{self.data_type_str}' }} "
+    def __str__(self) -> str:
+        return f"RegistryValue {{ name = '{self.name}', data = '{self.data}', type = '{self.data_type.name}' }} "
 
     def to_xml(self) -> str:
-        return f"<value name='{self.name}' data='{str(self.data)}' type='{self.data_type_str}' />"
+        return f"<value name='{self.name}' data='{str(self.data)}' type='{self.data_type.name}' />"
 
     @classmethod
-    def from_xml(cls, xml_element):
+    def from_xml(cls, xml_element) -> "RegistryValue":
         return cls(xml_element.get("name"), xml_element.get("data"), cls._data_type_name_to_value(xml_element.get("type")))
 
     def __eq__(self, other):
