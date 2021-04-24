@@ -4,6 +4,8 @@ from enum import Enum
 import textwrap
 from . import registry
 
+REGISTRY_PATH_SEPARATOR = "\\"
+
 class RgEdtException(Exception):
     pass
 

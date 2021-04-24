@@ -1,25 +1,29 @@
 import tkinter as tk
 from tkinter import ttk
 from collections import namedtuple
+import enum
+from typing import Dict, Callable
 
 from . import registry
 
 from .common import *
 
+class Events(enum.Enum):
+    KEY_SELECTED = enum.auto()
+
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
 
 class View(tk.Frame):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]], *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
 
         self.parent = parent
-
-        self.registry_key_map = {}
+        self.callbacks = callbacks
 
         self.pw = tk.PanedWindow(orient = 'horizontal') 
         self.details_view = RegistryDetailsView(self.pw)
-        self.keys_view = RegistryKeysView(self.pw, self.registry_key_map, self.details_view)
+        self.keys_view = RegistryKeysView(self.pw, self.details_view, self.callbacks)
 
         self.pw.add(self.keys_view.widget, width = 400)
         self.pw.add(self.details_view.widget)
@@ -29,8 +33,11 @@ class View(tk.Frame):
         self.reset()
 
     def reset(self) -> None:
-        self.details_view.reset()
+        self.reset_details()
         self.keys_view.reset()
+
+    def reset_details(self) -> None:
+        self.details_view.reset()
 
     def set_registry_keys(self, root_key: RegistryKey) -> None:
         self.keys_view.build_registry_tree(root_key, '')
@@ -38,6 +45,10 @@ class View(tk.Frame):
     def enable_test_mode(self) -> None:
         self.keys_view.enable_test_mode()
 
+    def set_current_key_values(self, current_values) -> None:
+        self.details_view.show_values(current_values)
+
+    
 class RegistryDetailsView():
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
 
@@ -58,19 +69,19 @@ class RegistryDetailsView():
 
         self.details.pack(side = tk.RIGHT)
 
-    def reset(self):
+    def reset(self) -> None:
         self.details.delete(*self.details.get_children())
 
     @property
     def widget(self):
         return self.details
 
-    def add_entry(self, name, data, data_type):
+    def _add_entry(self, name, data, data_type) -> None:
         name = name or '(Default)'
         data = data or '(value not set)'
         self.details.insert('', 'end', values = self.DetailsItemValues(name, data_type, data))  
 
-    def _change_value(self, event):
+    def _change_value(self, event) -> None:
         try:
             selected_item = self.details.selection()[0]
             tree_item = self.details.item(selected_item)
@@ -81,29 +92,37 @@ class RegistryDetailsView():
         except IndexError:
             pass
 
-class RegistryKeysView():
-    TreeItemValues = namedtuple("TreeItemValues", "id")
+    def show_values(self, values: List[RegistryValue]) -> None:
+        self.reset()
 
-    def __init__(self, parent, registry_key_map: Dict[int, RegistryKey], details_view: RegistryDetailsView):
+        if (len(values) == 0):
+            values = [RegistryValue('', '', registry.winreg.REG_SZ)]
+
+        for value in values:
+            self._add_entry(value.name, value.data, value.data_type.name)
+
+class RegistryKeysView():
+
+    def __init__(self, parent, details_view: RegistryDetailsView, callbacks: Dict[Events, Callable[..., None]]):
         self.parent = parent
-        self.registry_key_map = registry_key_map
         self.details_view = details_view
+        self.callbacks = callbacks
 
         self.tree = ttk.Treeview(parent, show = 'tree', selectmode = 'browse')
         self.tree.pack(side = tk.LEFT)
-        self.tree.bind('<<TreeviewSelect>>', self._show_key_details)
-        self.tree.tag_configure(IMPLICIT_TAG, foreground='gray')
+        self.tree.bind('<<TreeviewSelect>>', self._registry_key_selected)
+        self.tree.tag_configure(IMPLICIT_TAG, foreground = 'gray')
 
         self.fix_tkinter_color_tags()
 
-    def reset(self):
+    def reset(self) -> None:
         self.tree.delete(*self.tree.get_children())
 
     @property
     def widget(self):
         return self.tree
 
-    def fix_tkinter_color_tags(self):
+    def fix_tkinter_color_tags(self) -> None:
         def fixed_map(option):
             # Fix for setting text colour for Tkinter 8.6.9
             # From: https://core.tcl.tk/tk/info/509cafafae
@@ -119,36 +138,37 @@ class RegistryKeysView():
         style = ttk.Style()
         style.map('Treeview', foreground = fixed_map('foreground'), background = fixed_map('background'))
 
-    def build_registry_tree(self, key: RegistryKey, tree_parent):
-        key_id = id(key)
+    def build_registry_tree(self, key: RegistryKey, tree_parent) -> None:
         tag = EXPLICIT_TAG if key.is_explicit else IMPLICIT_TAG
-        sub_tree = self.tree.insert(tree_parent, 'end', text = key.name, open = True, 
-                                    values = self.TreeItemValues(key_id), tags = (tag, ))
-        self.registry_key_map[key_id] = key
+        sub_tree = self.tree.insert(tree_parent, 'end', text = key.name, open = True, tags = (tag, ))
         for subkey in key.sub_keys:
             self.build_registry_tree(subkey, sub_tree)
 
-    def _show_key_details(self, event):
-        try:
-            self.details_view.reset()
-            selected_item = self.tree.selection()[0]
-            tree_item = self.tree.item(selected_item)
-            registry_key = self.registry_key_map[self.TreeItemValues(*tree_item["values"]).id]
-            values = registry_key.values
+    def _registry_key_selected(self, event) -> None:
+        selected_item = self.tree.selection()[0]
+        path = self._get_registry_path(selected_item)
+        self.callbacks[Events.KEY_SELECTED](path, EXPLICIT_TAG in self.tree.item(selected_item)["tags"])
 
-            if (registry_key.is_explicit and len(values) == 0):
-                values = [RegistryValue('', '', registry.winreg.REG_SZ)]
-
-            for value in values:
-                self.details_view.add_entry(value.name, value.data, value.data_type.name)
- 
-        except IndexError:
-            pass
-
-    def enable_test_mode(self):
+    def enable_test_mode(self) -> None:
         style = ttk.Style(self.parent)
         background = "#fcf5d8"
-        style.configure("Treeview", background=background, fieldbackground=background)
+        style.configure("Treeview", background = background, fieldbackground = background)
+
+    def _get_registry_path(self, selected_item) -> str:
+        path = []
+        tree_item = self.tree.item(selected_item)
+        path.append(tree_item["text"])
+        current_item = selected_item
+
+        while (parent := self.tree.parent(current_item)) != "":
+            tree_item = self.tree.item(parent)
+            path.append(tree_item["text"])
+            current_item = parent
+
+        # TODO: Is there a better way?
+        path.pop() # "Computer"
+
+        return REGISTRY_PATH_SEPARATOR.join(reversed(path))
 
 class ChangeValueView():
     def __init__(self, parent, data_type):

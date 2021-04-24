@@ -208,7 +208,28 @@ class TestModel(unittest.TestCase):
         for key in _traverse_keys(tree):
             self.assertEqual(key.is_explicit, key.name in expilcit_key_names)
                 
+    def test_get_values_basic(self):
+        values = self.model.get_registry_key_values(r"HKEY_CLASSES_ROOT\.txt")
+        expected = """
+            <key name='.txt'>
+                <value name='Content Type' data='text/plain' type='REG_SZ' />
+                <value name='PerceivedType' data='text' type='REG_SZ' />
+                <value name='' data='txtfile' type='REG_SZ' />
+            </key>
+        """
+        self.assertEqual(values, list(self.xml_to_key(expected).values))
 
+    def test_get_values_nonexistant_key(self):
+        with self.assertRaises(common.RgEdtException):
+            self.model.get_registry_key_values(r"HKEY_CLASSES_ROOT\.foo")
+
+    def test_get_values_empty(self):
+        values = self.model.get_registry_key_values(r"HKEY_CURRENT_USER\SOFTWARE")
+        self.assertEqual(values, [])
+
+    def test_get_values_root(self):
+        values = self.model.get_registry_key_values(r"HKEY_CURRENT_USER")
+        self.assertEqual(values, [])
 
 # From root folder:
 #   python -m unittest rgedt.tests.test_model

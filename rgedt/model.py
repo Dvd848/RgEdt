@@ -11,7 +11,6 @@ from .common import *
         
 
 class Model(object):
-    PATH_SEPARATOR = "\\"
 
     _ROOT_KEY_SHORT = {
         "HKCR"                  : "HKEY_CLASSES_ROOT",
@@ -41,7 +40,7 @@ class Model(object):
         return computer
 
     def _build_key_structure(self, computer: RegistryKey, key_path: str) -> RegistryKey:
-        keys_in_path = key_path.split(self.PATH_SEPARATOR)
+        keys_in_path = key_path.split(REGISTRY_PATH_SEPARATOR)
 
         # First key in path:
         root_key_str = keys_in_path.pop(0)
@@ -57,7 +56,7 @@ class Model(object):
             leaf_key_str = keys_in_path.pop() if len(keys_in_path) > 0 else ""
 
             # Anything in the middle (if exists)
-            middle_path = self.PATH_SEPARATOR.join(keys_in_path)
+            middle_path = REGISTRY_PATH_SEPARATOR.join(keys_in_path)
             
             current_key = root_key
             for middle_key_str in keys_in_path:
@@ -121,4 +120,27 @@ class Model(object):
                 sorted_paths.pop(0)
 
         return res
+
+    def get_registry_key_values(self, key: str) -> List[RegistryValue]:
+        try:
+            values = []
+
+            split_key = key.split(REGISTRY_PATH_SEPARATOR, maxsplit = 1)
+            root_key_str = split_key[0]
+            rest_of_key = split_key[1] if len(split_key) > 1 else ''
+
+            if root_key_str in self._ROOT_KEY_SHORT.keys():
+                root_key_str = self._ROOT_KEY_SHORT[root_key_str]
+            root_key_const = self._root_key_name_to_value(root_key_str)
+
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, rest_of_key) as sub_key_handle:
+                    _, num_values, _ = registry.winreg.QueryInfoKey(sub_key_handle)
+                    for i in range(num_values):
+                        name, value, key_type = registry.winreg.EnumValue(sub_key_handle, i)
+                        values.append(RegistryValue(name = name, data = value, data_type = key_type))
+                return values
+
+        except Exception as e:
+            raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
 

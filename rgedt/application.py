@@ -13,7 +13,11 @@ class Application(tk.Tk):
         self.resizable(width = True, height = True)
         self.geometry('1280x720')
 
-        self.view = v.View(self)
+        callbacks = {
+            v.Events.KEY_SELECTED: self.cb_key_selected
+        }
+
+        self.view = v.View(self, callbacks)
         self.model = m.Model()
 
         registry_tree = self.model.get_registry_tree([r'HKEY_CURRENT_USER\SOFTWARE\Python'])
@@ -25,3 +29,10 @@ class Application(tk.Tk):
     def enable_test_mode(self):
         self.test_mode = True
         self.view.enable_test_mode()
+
+    def cb_key_selected(self, path: str, is_explicit: bool) -> None:
+        if is_explicit:
+            values = self.model.get_registry_key_values(path)
+            self.view.set_current_key_values(values)
+        else:
+            self.view.reset_details()
