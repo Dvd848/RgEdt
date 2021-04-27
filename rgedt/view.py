@@ -87,7 +87,8 @@ class RegistryDetailsView():
             tree_item = self.details.item(selected_item)
             tree_item_values = self.DetailsItemValues(*tree_item["values"])
 
-            change_value_window = ChangeValueView(self.parent, tree_item_values.data_type)
+            change_value_window = ChangeValueView.from_type(tree_item_values.data_type, self.parent, 
+                                                            tree_item_values.name, tree_item_values.data)
 
         except IndexError:
             pass
@@ -171,15 +172,92 @@ class RegistryKeysView():
         return REGISTRY_PATH_SEPARATOR.join(reversed(path))
 
 class ChangeValueView():
-    def __init__(self, parent, data_type):
+
+    def __init__(self, parent, name: str, data):
         self.parent = parent
-        self.data_type = data_type
+        self.name = name
+        self.data = data
 
         self.window = tk.Toplevel(self.parent)
-        self.window.title("Edit Value") 
-        self.window.geometry("330x200") 
+        self.window.title(f"Edit {self.type_name}") 
+        self.window.geometry(f"{self.width}x{self.height}") 
         #self.window.attributes('-toolwindow', True)
         self.window.resizable(0, 0)
         self.window.transient(self.parent)
         self.window.grab_set()
-        tk.Label(self.window, text ="This is a new window").pack() 
+        #tk.Label(self.window, text ="This is a new window").pack() 
+    
+    @property
+    def type_name(self):
+        return "Value"
+
+    @property
+    def width(self):
+        return 380
+
+    @property
+    def height(self):
+        return 180
+
+    @classmethod
+    def from_type(cls, type: str, parent, name: str, data):
+        factory_var = "_FACTORY"
+        if not hasattr(cls, factory_var):
+            setattr(cls, factory_var, {
+                "REG_SZ": ChangeStringView
+            })
+
+        try:
+            return getattr(cls, factory_var)[type](parent, name, data)
+        except KeyError as e:
+            raise ValueError(f"Can't create appropriate 'change value' view for '{type}'") from e
+
+    def submit(self):
+        print("Test")
+
+class ChangeStringView(ChangeValueView):
+    def __init__(self, parent, name: str, data):
+        super().__init__(parent, name, data)
+
+        padx = 5
+        pady = 2
+
+        # Create a text label
+        name_label = tk.Label(self.window, text="Value name:", anchor='w')
+        name_label.pack(fill=tk.X, padx=padx, pady=pady)
+
+        # Create a text entry box
+        name_entry = tk.Entry(self.window)
+        name_entry.insert(tk.END, self.name)
+        name_entry.configure(state="disabled")
+        name_entry.pack(fill=tk.X, padx=padx, pady=pady)
+
+        # Create a text label
+        data_label = tk.Label(self.window, text="Value data:", anchor='w')
+        data_label.pack(fill=tk.X, padx=padx, pady=pady)
+
+        # Create a text entry box
+        self.data_entry = tk.Entry(self.window)
+        self.data_entry.insert(tk.END, self.data)
+        self.data_entry.pack(fill=tk.X, padx=padx, pady=pady)
+        self.data_entry.focus()   # Put the cursor in the text box
+
+        # Create a button
+        cancel_button = tk.Button(self.window, text="Cancel", command=self.window.destroy)
+        cancel_button.pack(side=tk.RIGHT, padx=padx)
+
+        # Create a button
+        ok_button = tk.Button(self.window, text="OK", command = self.submit)
+        ok_button.pack(side=tk.RIGHT, padx=padx)
+
+    @property
+    def type_name(self):
+        return "String"
+
+    @property
+    def width(self):
+        return 380
+
+    @property
+    def height(self):
+        return 180
