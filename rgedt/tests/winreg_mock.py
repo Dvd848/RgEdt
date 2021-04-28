@@ -205,6 +205,27 @@ def EnumValue(key: PyHKEY, index: int) -> Tuple[str, object, int]:
     except Exception as e:
         raise OSError("General Error") from e
 
+def SetValueEx(key: PyHKEY, value_name: str, reserved, value_type: Literal[list(_TYPE_MAPPING.keys())], value) -> None:
+    if __registry is None:
+        raise RuntimeError("Please initialize the registry first via InitRegistry()")
+
+    if not key.is_allowed(KEY_SET_VALUE):
+        raise PermissionError("Access is denied")
+
+    try:
+        value_elem = key.element.find(f"./value[@name='{value_name}']")
+        type_str = value_elem.get("type")
+        type_ = _TYPE_MAPPING[type_str]
+
+        # TODO: Check against winreg behavior
+        assert(type_.value == value_type)
+
+        value_elem.set("data", str(value))
+    except OSError as e:
+        raise e
+    except Exception as e:
+        raise OSError("General Error") from e
+
 ## ------------------------------------ Tests ------------------------------------ ##
 
 if __name__ == "__main__":
@@ -259,13 +280,12 @@ if __name__ == "__main__":
                             self.assertEqual(num_values, 1)
                             self.assertEqual(EnumValue(handle2, 0), ("version", 1, REG_DWORD))
 
-        def test_basic_3(self):
+        def test_incorrect_key_path(self):
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 with self.assertRaises(OSError):
                     key = OpenKey(root_key_handle, r"RgEdt")
-                    self.assertEqual(QueryInfoKey(key), (0, 1, _DEFAULT_MOD_TIME))
         
-        def test_basic_4(self):
+        def test_no_such_key(self):
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 with self.assertRaises(OSError):
                     key = OpenKey(root_key_handle, r"NoSuchKey")
@@ -284,6 +304,19 @@ if __name__ == "__main__":
                         self.assertEqual(EnumValue(handle, 0), ("v1", "d1", REG_SZ))
                     with self.assertRaises(PermissionError):
                         self.assertEqual(EnumKey(handle, 0), "Control")
+
+        def test_permissions_no_write(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_READ) as handle:
+                    with self.assertRaises(PermissionError):
+                        SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
+
+        def test_write(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
+                    SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
+                    self.assertEqual(EnumValue(handle, 0), ("v1", "d1_new", REG_SZ))
+
                 
 
     unittest.main()
