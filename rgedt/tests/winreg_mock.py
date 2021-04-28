@@ -19,16 +19,16 @@ _HKEY_MAPPING = {
 }
 
 ## Access Rights        
-KEY_ALL_ACCESS                  = 1
-KEY_WRITE                       = 2
-KEY_READ                        = 3
-KEY_EXECUTE                     = 4
-KEY_QUERY_VALUE                 = 5
-KEY_SET_VALUE                   = 6
-KEY_CREATE_SUB_KEY              = 7
-KEY_ENUMERATE_SUB_KEYS          = 8
-KEY_NOTIFY                      = 9
-KEY_CREATE_LINK                 = 10
+KEY_QUERY_VALUE                 = (1 << 0)
+KEY_SET_VALUE                   = (1 << 1)
+KEY_CREATE_SUB_KEY              = (1 << 2)
+KEY_ENUMERATE_SUB_KEYS          = (1 << 3)
+KEY_NOTIFY                      = (1 << 4)
+KEY_CREATE_LINK                 = (1 << 5)
+KEY_ALL_ACCESS                  = (KEY_QUERY_VALUE | KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY | KEY_CREATE_LINK)
+KEY_WRITE                       = (KEY_SET_VALUE | KEY_CREATE_SUB_KEY)
+KEY_READ                        = (KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS | KEY_NOTIFY)
+KEY_EXECUTE                     = KEY_READ
 _ACCESS_RIGHTS = [KEY_ALL_ACCESS, KEY_WRITE, KEY_READ, KEY_EXECUTE, KEY_QUERY_VALUE, KEY_SET_VALUE, KEY_CREATE_SUB_KEY, KEY_ENUMERATE_SUB_KEYS,
                     KEY_NOTIFY, KEY_CREATE_LINK]
 
@@ -82,12 +82,20 @@ def InitRegistry(xml) -> None:
     __registry = ET.fromstring(xml)
 
 class PyHKEY(object):
-    def __init__(self, element: ET.Element): 
+    def __init__(self, element: ET.Element, access: Literal[_ACCESS_RIGHTS]): 
         self._element = element
+        self._access = access
 
     @property
     def element(self):
         return self._element
+
+    @property
+    def access(self):
+        return self._access
+
+    def is_allowed(self, action: Literal[_ACCESS_RIGHTS]):
+        return self.access & action
           
     def __enter__(self): 
         return self
@@ -107,7 +115,7 @@ class PyHKEY(object):
     def __eq__(self, other):
         if not isinstance(other, PyHKEY):
             return False
-        return self.element == other.element
+        return self.element == other.element and self.access == other.access
 
 
 def ConnectRegistry(computer_name: Optional[str], key: Literal[_HKEY_MAPPING.keys()]) -> PyHKEY:
@@ -122,7 +130,7 @@ def ConnectRegistry(computer_name: Optional[str], key: Literal[_HKEY_MAPPING.key
         element = __registry.find(f"./key[@name='{key_str}']")
         if element is None:
             raise OSError(f"Registry does not contain '{key_str}' key")
-        return PyHKEY(element)
+        return PyHKEY(element, access = KEY_READ)
     except KeyError as e:
         raise OSError("Handle is invalid") from e
     except OSError as e:
@@ -136,12 +144,12 @@ def OpenKey(key: PyHKEY, sub_key: str, reserved = 0, access: Literal[_ACCESS_RIG
 
     try:
         if sub_key == "":
-            return PyHKEY(key.element)
+            return PyHKEY(key.element, access = access)
         xpath = "/".join(f"key[@name='{sk}']" for sk in sub_key.split(_SEPARATOR))
         element = key.element.find(xpath)
         if element is None:
             raise OSError(f"Registry does not contain '{sub_key}' path under provided key")
-        return PyHKEY(element)
+        return PyHKEY(element, access = access)
     except OSError as e:
         raise e
     except Exception as e:
@@ -150,6 +158,9 @@ def OpenKey(key: PyHKEY, sub_key: str, reserved = 0, access: Literal[_ACCESS_RIG
 def QueryInfoKey(key: PyHKEY) -> Tuple[int, int, int]:
     if __registry is None:
         raise RuntimeError("Please initialize the registry first via InitRegistry()")
+
+    if not key.is_allowed(KEY_QUERY_VALUE):
+        raise PermissionError("Access is denied")
 
     try:
         num_sub_keys = len(key.element.findall("./key"))
@@ -165,6 +176,9 @@ def EnumKey(key: PyHKEY, index: int) -> str:
     if __registry is None:
         raise RuntimeError("Please initialize the registry first via InitRegistry()")
 
+    if not key.is_allowed(KEY_ENUMERATE_SUB_KEYS):
+        raise PermissionError("Access is denied")
+
     try:
         return key.element.find(f"./key[{index + 1}]").get("name")
     except OSError as e:
@@ -175,6 +189,9 @@ def EnumKey(key: PyHKEY, index: int) -> str:
 def EnumValue(key: PyHKEY, index: int) -> Tuple[str, object, int]:
     if __registry is None:
         raise RuntimeError("Please initialize the registry first via InitRegistry()")
+
+    if not key.is_allowed(KEY_QUERY_VALUE):
+        raise PermissionError("Access is denied")
 
     try:
         value = key.element.find(f"./value[{index + 1}]")
@@ -257,6 +274,16 @@ if __name__ == "__main__":
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 handle1 = OpenKey(root_key_handle, "")
                 self.assertEqual(root_key_handle, handle1)
+
+        def test_permissions_no_read(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_WRITE) as handle:
+                    with self.assertRaises(PermissionError):
+                        num_subkeys, num_values, _ = QueryInfoKey(handle)
+                    with self.assertRaises(PermissionError):
+                        self.assertEqual(EnumValue(handle, 0), ("v1", "d1", REG_SZ))
+                    with self.assertRaises(PermissionError):
+                        self.assertEqual(EnumKey(handle, 0), "Control")
                 
 
     unittest.main()
