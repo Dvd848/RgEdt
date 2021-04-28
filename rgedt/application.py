@@ -14,7 +14,8 @@ class Application(tk.Tk):
         self.geometry('1280x720')
 
         callbacks = {
-            v.Events.KEY_SELECTED: self.cb_key_selected
+            v.Events.KEY_SELECTED: self.cb_key_selected,
+            v.Events.EDIT_VALUE:   self.cb_edit_value,
         }
 
         self.view = v.View(self, callbacks)
@@ -36,3 +37,6 @@ class Application(tk.Tk):
             self.view.set_current_key_values(values)
         else:
             self.view.reset_details()
+
+    def cb_edit_value(self, path: str, new_value) -> None:
+        print(path, new_value)
