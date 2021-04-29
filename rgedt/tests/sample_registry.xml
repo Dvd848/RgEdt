@@ -181,6 +181,9 @@
                     </key>
                 </key>
             </key>
+            <key name='EditMe'>
+                <value name='string' data='test' type='REG_SZ' />
+            </key>
         </key>
     </key>
     <key name='HKEY_CURRENT_CONFIG'>

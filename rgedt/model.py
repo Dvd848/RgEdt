@@ -121,17 +121,24 @@ class Model(object):
 
         return res
 
+    @classmethod
+    def _split_key(cls, key: str) -> Tuple[int, str]:
+        split_key = key.split(REGISTRY_PATH_SEPARATOR, maxsplit = 1)
+        root_key_str = split_key[0]
+        rest_of_key = split_key[1] if len(split_key) > 1 else ''
+
+        if root_key_str in cls._ROOT_KEY_SHORT.keys():
+            root_key_str = cls._ROOT_KEY_SHORT[root_key_str]
+        root_key_const = cls._root_key_name_to_value(root_key_str)
+
+        return (root_key_const, rest_of_key)
+
+
     def get_registry_key_values(self, key: str) -> List[RegistryValue]:
         try:
             values = []
 
-            split_key = key.split(REGISTRY_PATH_SEPARATOR, maxsplit = 1)
-            root_key_str = split_key[0]
-            rest_of_key = split_key[1] if len(split_key) > 1 else ''
-
-            if root_key_str in self._ROOT_KEY_SHORT.keys():
-                root_key_str = self._ROOT_KEY_SHORT[root_key_str]
-            root_key_const = self._root_key_name_to_value(root_key_str)
+            root_key_const, rest_of_key = self._split_key(key)
 
             with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
                 with registry.winreg.OpenKey(root_key_handle, rest_of_key) as sub_key_handle:
@@ -143,4 +150,16 @@ class Model(object):
 
         except Exception as e:
             raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
+
+    def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value):
+        try:
+            root_key_const, rest_of_key = self._split_key(key)
+
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, rest_of_key, access = registry.winreg.KEY_WRITE) as sub_key_handle:
+                    registry.winreg.SetValueEx(sub_key_handle, value_name, 0, getattr(registry.winreg, value_type), new_value)
+
+        except Exception as e:
+            raise RgEdtException(f"Can't set value '{value_name}' for key '{key}'") from e
+
 

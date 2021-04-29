@@ -31,12 +31,16 @@ class Application(tk.Tk):
         self.test_mode = True
         self.view.enable_test_mode()
 
+    def _display_current_key_values(self, path: str):
+        values = self.model.get_registry_key_values(path)
+        self.view.set_current_key_values(values)
+
     def cb_key_selected(self, path: str, is_explicit: bool) -> None:
         if is_explicit:
-            values = self.model.get_registry_key_values(path)
-            self.view.set_current_key_values(values)
+            self._display_current_key_values(path)
         else:
             self.view.reset_details()
 
-    def cb_edit_value(self, path: str, new_value) -> None:
-        print(path, new_value)
+    def cb_edit_value(self, path: str, data_name: str, data_type: int, new_value) -> None:
+        self.model.edit_registry_key_value(path, data_name, data_type, new_value)
+        self._display_current_key_values(path)

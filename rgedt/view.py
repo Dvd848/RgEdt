@@ -15,6 +15,8 @@ class Events(enum.Enum):
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
 
+EMPTY_NAME_TAG = 'empty_name'
+
 class View(tk.Frame):
     def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]], *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
@@ -153,9 +155,10 @@ class RegistryDetailsView():
         return self.details
 
     def _add_entry(self, name: str, data, data_type: str) -> None:
+        tags = (EMPTY_NAME_TAG, ) if name == '' else tuple()
         name = name or '(Default)'
         data = data or '(value not set)'
-        self.details.insert('', 'end', values = self.DetailsItemValues(name, data_type, data))  
+        self.details.insert('', 'end', values = self.DetailsItemValues(name, data_type, data), tags = tags)
 
     @property
     def selected_item(self):
@@ -168,7 +171,12 @@ class RegistryDetailsView():
 
             edit_value_class = EditValueView.from_type(tree_item_values.data_type)
 
-            edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_path, new_value)
+            name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
+
+            edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_path, 
+                                                                                      name,
+                                                                                      tree_item_values.data_type,
+                                                                                      new_value)
 
             edit_value_window = edit_value_class(self.parent, tree_item_values.name, tree_item_values.data, edit_value_callback)
 
