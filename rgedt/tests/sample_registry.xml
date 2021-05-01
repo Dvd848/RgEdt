@@ -184,6 +184,14 @@
             <key name='EditMe'>
                 <value name='string' data='test' type='REG_SZ' />
             </key>
+            <key name='types'>
+                <value name='type_str' data='test' type='REG_SZ' />
+                <value name='type_bin' data='112233' type='REG_BINARY' />
+                <value name='type_dword' data='3735928559' type='REG_DWORD' />
+                <value name='type_qword' data='841592647419084478' type='REG_QWORD' />
+                <value name='type_multi_str' data='test1\ntest2\ntest3' type='REG_MULTI_SZ' />
+                <value name='type_exp_str' data='%SystemDrive%\\test' type='REG_EXPAND_SZ' />
+            </key>
         </key>
     </key>
     <key name='HKEY_CURRENT_CONFIG'>

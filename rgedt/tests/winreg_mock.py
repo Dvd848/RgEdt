@@ -54,23 +54,28 @@ REG_SZ                          = 14
 
 def _NotImplemented(msg = None): 
     raise NotImplementedError(msg)
-_TypeRecord = namedtuple("TypeRecord", "value function")
+
+_TypeRecord = namedtuple("TypeRecord", "type_str function") 
+
 _TYPE_MAPPING = {
-    "REG_BINARY":                       _TypeRecord(REG_BINARY, lambda x: _NotImplemented()),
-    "REG_DWORD":                        _TypeRecord(REG_DWORD, int),
-    "REG_DWORD_LITTLE_ENDIAN":          _TypeRecord(REG_DWORD_LITTLE_ENDIAN, int),
-    "REG_DWORD_BIG_ENDIAN":             _TypeRecord(REG_DWORD_BIG_ENDIAN, lambda x: _NotImplemented()),
-    "REG_EXPAND_SZ":                    _TypeRecord(REG_EXPAND_SZ, lambda x: _NotImplemented()),
-    "REG_LINK":                         _TypeRecord(REG_LINK, lambda x: _NotImplemented()),
-    "REG_MULTI_SZ":                     _TypeRecord(REG_MULTI_SZ, lambda x: _NotImplemented()),
-    "REG_NONE":                         _TypeRecord(REG_NONE, lambda x: _NotImplemented()),
-    "REG_QWORD":                        _TypeRecord(REG_QWORD, lambda x: int),
-    "REG_QWORD_LITTLE_ENDIAN":          _TypeRecord(REG_QWORD_LITTLE_ENDIAN, int),
-    "REG_RESOURCE_LIST":                _TypeRecord(REG_RESOURCE_LIST, lambda x: _NotImplemented()),
-    "REG_FULL_RESOURCE_DESCRIPTOR":     _TypeRecord(REG_FULL_RESOURCE_DESCRIPTOR, lambda x: _NotImplemented()),
-    "REG_RESOURCE_REQUIREMENTS_LIST":   _TypeRecord(REG_RESOURCE_REQUIREMENTS_LIST, lambda x: _NotImplemented()),
-    "REG_SZ":                           _TypeRecord(REG_SZ, str),
+    REG_BINARY:                       _TypeRecord("REG_BINARY",                     lambda x: _NotImplemented()),
+    REG_DWORD:                        _TypeRecord("REG_DWORD",                      int),
+    REG_DWORD_LITTLE_ENDIAN:          _TypeRecord("REG_DWORD_LITTLE_ENDIAN",        int),
+    REG_DWORD_BIG_ENDIAN:             _TypeRecord("REG_DWORD_BIG_ENDIAN",           lambda x: _NotImplemented()),
+    REG_EXPAND_SZ:                    _TypeRecord("REG_EXPAND_SZ",                  lambda x: _NotImplemented()),
+    REG_LINK:                         _TypeRecord("REG_LINK",                       lambda x: _NotImplemented()),
+    REG_MULTI_SZ:                     _TypeRecord("REG_MULTI_SZ",                   lambda x: _NotImplemented()),
+    REG_NONE:                         _TypeRecord("REG_NONE",                       lambda x: _NotImplemented()),
+    REG_QWORD:                        _TypeRecord("REG_QWORD",                      int),
+    REG_QWORD_LITTLE_ENDIAN:          _TypeRecord("REG_QWORD_LITTLE_ENDIAN",        int),
+    REG_RESOURCE_LIST:                _TypeRecord("REG_RESOURCE_LIST",              lambda x: _NotImplemented()),
+    REG_FULL_RESOURCE_DESCRIPTOR:     _TypeRecord("REG_FULL_RESOURCE_DESCRIPTOR",   lambda x: _NotImplemented()),
+    REG_RESOURCE_REQUIREMENTS_LIST:   _TypeRecord("REG_RESOURCE_REQUIREMENTS_LIST", lambda x: _NotImplemented()),
+    REG_SZ:                           _TypeRecord("REG_SZ",                         str),
     }
+
+def _type_str_to_type(type_str: str):
+    return globals()[type_str]
 
 _SEPARATOR = "\\"
 _DEFAULT_MOD_TIME = 12345678
@@ -196,10 +201,10 @@ def EnumValue(key: PyHKEY, index: int) -> Tuple[str, object, int]:
     try:
         value = key.element.find(f"./value[{index + 1}]")
         name = value.get("name")
-        type_str = value.get("type")
-        type_ = _TYPE_MAPPING[type_str]
+        type_const = _type_str_to_type(value.get("type"))
+        type_record = _TYPE_MAPPING[type_const]
         data = value.get("data")
-        return (name, type_.function(data), type_.value)
+        return (name, type_record.function(data), type_const)
     except OSError as e:
         raise e
     except Exception as e:
@@ -212,15 +217,39 @@ def SetValueEx(key: PyHKEY, value_name: str, reserved, value_type: Literal[list(
     if not key.is_allowed(KEY_SET_VALUE):
         raise PermissionError("Access is denied")
 
+    if not value_type in _TYPE_MAPPING:
+        raise TypeError(f"Unknown type {value_type}")
+
+    # TODO: Convert each type to correct representation
+
     try:
         value_elem = key.element.find(f"./value[@name='{value_name}']")
-        type_str = value_elem.get("type")
-        type_ = _TYPE_MAPPING[type_str]
+        if value_elem is None:
+            value_elem = ET.SubElement(key.element, "value", name = value_name, data = value, type = _TYPE_MAPPING[value_type].type_str)
+        else:
+            value_elem.set("data", str(value))
+            value_elem.set("type", _TYPE_MAPPING[value_type].type_str)
+    except OSError as e:
+        raise e
+    except Exception as e:
+        raise OSError("General Error") from e
 
-        # TODO: Check against winreg behavior
-        assert(type_.value == value_type)
+def QueryValueEx(key: PyHKEY, value_name: str):
+    if __registry is None:
+        raise RuntimeError("Please initialize the registry first via InitRegistry()")
 
-        value_elem.set("data", str(value))
+    if not key.is_allowed(KEY_QUERY_VALUE):
+        raise PermissionError("Access is denied")
+
+    try:
+        value_elem = key.element.find(f"./value[@name='{value_name}']")
+        if value_elem is None:
+            raise FileNotFoundError(f"Can't find {value_name} in {key}")
+
+        type_const = _type_str_to_type(value_elem.get("type"))
+        type_record = _TYPE_MAPPING[type_const]
+
+        return (type_record.function(value_elem.get("data")), type_const)
     except OSError as e:
         raise e
     except Exception as e:
@@ -254,6 +283,14 @@ if __name__ == "__main__":
                         <key name="SOFTWARE">
                             <key name="RgEdt">
                                 <value name="version" data="1" type="REG_DWORD" />
+                            </key>
+                            <key name='types'>
+                                <value name='type_str' data='test' type='REG_SZ' />
+                                <value name='type_bin' data='112233' type='REG_BINARY' />
+                                <value name='type_dword' data='3735928559' type='REG_DWORD' />
+                                <value name='type_qword' data='841592647419084478' type='REG_QWORD' />
+                                <value name='type_multi_str' data='test1\ntest2\ntest3' type='REG_MULTI_SZ' />
+                                <value name='type_exp_str' data='%SystemDrive%\\test' type='REG_EXPAND_SZ' />
                             </key>
                         </key>
                     </key>
@@ -311,12 +348,36 @@ if __name__ == "__main__":
                     with self.assertRaises(PermissionError):
                         SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
 
+        def test_query_value(self):
+            with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
+                with OpenKey(root_key_handle, r"SOFTWARE\types") as handle:
+                    self.assertEqual(QueryValueEx(handle, "type_str"), ("test", REG_SZ))
+                    #self.assertEqual(QueryValueEx(handle, "type_bin"), ("112233", REG_BINARY))
+                    self.assertEqual(QueryValueEx(handle, "type_dword"), (3735928559, REG_DWORD))
+                    self.assertEqual(QueryValueEx(handle, "type_qword"), (841592647419084478, REG_QWORD))
+                    #self.assertEqual(QueryValueEx(handle, "type_multi_str"), ("test1\ntest2\ntest3", REG_MULTI_SZ))
+                    #self.assertEqual(QueryValueEx(handle, "type_exp_str"), ("%SystemDrive%\\test", REG_EXPAND_SZ))
+
         def test_write(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
                     SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
-                    self.assertEqual(EnumValue(handle, 0), ("v1", "d1_new", REG_SZ))
+                    self.assertEqual(QueryValueEx(handle, "v1"), ("d1_new", REG_SZ))
 
+        
+        def test_write_new_value(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
+                    SetValueEx(handle, "nonexistant_key", 0, REG_SZ, "new_value")
+                    self.assertEqual(QueryValueEx(handle, "nonexistant_key"), ("new_value", REG_SZ))
+
+        def test_write_change_value_type(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
+                    SetValueEx(handle, "nonexistant_key_str", 0, REG_SZ, "new_value")
+                    self.assertEqual(QueryValueEx(handle, "nonexistant_key_str"), ("new_value", REG_SZ))
+                    SetValueEx(handle, "nonexistant_key_str", 0, REG_DWORD, 123)
+                    self.assertEqual(QueryValueEx(handle, "nonexistant_key_str"), (123, REG_DWORD))
                 
 
     unittest.main()
