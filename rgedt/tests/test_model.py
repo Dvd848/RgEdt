@@ -233,11 +233,12 @@ class TestModel(unittest.TestCase):
 
     def test_edit_value(self):
         key = r"HKEY_LOCAL_MACHINE\SYSTEM\EditMe"
-        self.model.edit_registry_key_value(key, "string", "REG_SZ", "new_value")
-        values = self.model.get_registry_key_values(key)
+        value_name = "string"
+        new_value = "new_value"
+        self.model.edit_registry_key_value(key, value_name, "REG_SZ", new_value)
+        value = self.model.get_registry_key_value(key, value_name)
 
-        # TODO: Implement QueryValueEx?
-        self.assertEqual(values, [common.RegistryValue("string", "new_value", registry.winreg.REG_SZ)])
+        self.assertEqual(value, new_value)
 
 # From root folder:
 #   python -m unittest rgedt.tests.test_model

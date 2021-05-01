@@ -151,6 +151,18 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
 
+    def get_registry_key_value(self, key: str, value_name: str):
+        try:
+            root_key_const, rest_of_key = self._split_key(key)
+
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, rest_of_key) as sub_key_handle:
+                    value, value_type = registry.winreg.QueryValueEx(sub_key_handle, value_name)
+                    return value
+
+        except Exception as e:
+            raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
+
     def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value):
         try:
             root_key_const, rest_of_key = self._split_key(key)
