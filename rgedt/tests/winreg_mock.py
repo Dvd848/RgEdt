@@ -58,13 +58,13 @@ def _NotImplemented(msg = None):
 _TypeRecord = namedtuple("TypeRecord", "type_str function") 
 
 _TYPE_MAPPING = {
-    REG_BINARY:                       _TypeRecord("REG_BINARY",                     lambda x: _NotImplemented()),
+    REG_BINARY:                       _TypeRecord("REG_BINARY",                     bytes.fromhex),
     REG_DWORD:                        _TypeRecord("REG_DWORD",                      int),
     REG_DWORD_LITTLE_ENDIAN:          _TypeRecord("REG_DWORD_LITTLE_ENDIAN",        int),
     REG_DWORD_BIG_ENDIAN:             _TypeRecord("REG_DWORD_BIG_ENDIAN",           lambda x: _NotImplemented()),
-    REG_EXPAND_SZ:                    _TypeRecord("REG_EXPAND_SZ",                  lambda x: _NotImplemented()),
+    REG_EXPAND_SZ:                    _TypeRecord("REG_EXPAND_SZ",                  str),
     REG_LINK:                         _TypeRecord("REG_LINK",                       lambda x: _NotImplemented()),
-    REG_MULTI_SZ:                     _TypeRecord("REG_MULTI_SZ",                   lambda x: _NotImplemented()),
+    REG_MULTI_SZ:                     _TypeRecord("REG_MULTI_SZ",                   lambda x: x.split("\\n")),
     REG_NONE:                         _TypeRecord("REG_NONE",                       lambda x: _NotImplemented()),
     REG_QWORD:                        _TypeRecord("REG_QWORD",                      int),
     REG_QWORD_LITTLE_ENDIAN:          _TypeRecord("REG_QWORD_LITTLE_ENDIAN",        int),
@@ -286,10 +286,10 @@ if __name__ == "__main__":
                             </key>
                             <key name='types'>
                                 <value name='type_str' data='test' type='REG_SZ' />
-                                <value name='type_bin' data='112233' type='REG_BINARY' />
+                                <value name='type_bin' data='11223344' type='REG_BINARY' />
                                 <value name='type_dword' data='3735928559' type='REG_DWORD' />
                                 <value name='type_qword' data='841592647419084478' type='REG_QWORD' />
-                                <value name='type_multi_str' data='test1\ntest2\ntest3' type='REG_MULTI_SZ' />
+                                <value name='type_multi_str' data='test1\\ntest2\\ntest3' type='REG_MULTI_SZ' />
                                 <value name='type_exp_str' data='%SystemDrive%\\test' type='REG_EXPAND_SZ' />
                             </key>
                         </key>
@@ -352,11 +352,11 @@ if __name__ == "__main__":
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 with OpenKey(root_key_handle, r"SOFTWARE\types") as handle:
                     self.assertEqual(QueryValueEx(handle, "type_str"), ("test", REG_SZ))
-                    #self.assertEqual(QueryValueEx(handle, "type_bin"), ("112233", REG_BINARY))
+                    self.assertEqual(QueryValueEx(handle, "type_bin"), (b'\x11"3D', REG_BINARY))
                     self.assertEqual(QueryValueEx(handle, "type_dword"), (3735928559, REG_DWORD))
                     self.assertEqual(QueryValueEx(handle, "type_qword"), (841592647419084478, REG_QWORD))
-                    #self.assertEqual(QueryValueEx(handle, "type_multi_str"), ("test1\ntest2\ntest3", REG_MULTI_SZ))
-                    #self.assertEqual(QueryValueEx(handle, "type_exp_str"), ("%SystemDrive%\\test", REG_EXPAND_SZ))
+                    self.assertEqual(QueryValueEx(handle, "type_multi_str"), (['test1', 'test2', 'test3'], REG_MULTI_SZ))
+                    self.assertEqual(QueryValueEx(handle, "type_exp_str"), ("%SystemDrive%\\test", REG_EXPAND_SZ))
 
         def test_write(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
