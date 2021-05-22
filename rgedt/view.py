@@ -139,6 +139,34 @@ class RegistryKeysView():
         background = "#fcf5d8"
         style.configure("Treeview", background = background, fieldbackground = background)
 
+class RegistryDetailsMenu():
+
+    def __init__(self, parent):
+        self.parent = parent
+
+        self.menu_freespace = tk.Menu(self.parent, tearoff = 0)
+        freespace_new_menu = tk.Menu(self.parent, tearoff = 0)
+
+        self.menu_freespace.add_cascade(label="New", menu=freespace_new_menu)
+
+        freespace_new_menu.add_command(label ="Key")
+        freespace_new_menu.add_separator()
+        freespace_new_menu.add_command(label ="String Value")
+        #freespace_new_menu.add_command(label ="Binary Value")
+        freespace_new_menu.add_command(label ="DWORD (32 bit) value")
+        #freespace_new_menu.add_command(label ="QWORD (64 bit) value")
+        #freespace_new_menu.add_command(label ="Multi-String value")
+        #freespace_new_menu.add_command(label ="Expandable String value")
+
+        self.menu_item = tk.Menu(self.parent, tearoff = 0)
+
+    def show(self, event, item) -> None:
+        menu = self.menu_item if item else self.menu_freespace
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
 
 class RegistryDetailsView():
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
@@ -162,7 +190,7 @@ class RegistryDetailsView():
 
         self.details.pack(side = tk.RIGHT)
 
-        self._create_menus()
+        self.menu = RegistryDetailsMenu(self.parent)
         self.details.bind("<Button-3>", self._show_menu)
 
     def reset(self) -> None:
@@ -218,24 +246,7 @@ class RegistryDetailsView():
         for value in values:
             self._add_entry(value.name, value.data, value.data_type.name)
 
-    def _create_menus(self) -> None:
-        self.menu_freespace = tk.Menu(self.parent, tearoff = 0)
-        freespace_new_menu = tk.Menu(self.parent, tearoff = 0)
-
-        self.menu_freespace.add_cascade(label="New", menu=freespace_new_menu)
-
-        freespace_new_menu.add_command(label ="Key")
-        freespace_new_menu.add_separator()
-        freespace_new_menu.add_command(label ="String Value")
-        #freespace_new_menu.add_command(label ="Binary Value")
-        freespace_new_menu.add_command(label ="DWORD (32 bit) value")
-        #freespace_new_menu.add_command(label ="QWORD (64 bit) value")
-        #freespace_new_menu.add_command(label ="Multi-String value")
-        #freespace_new_menu.add_command(label ="Expandable String value")
-
-        self.menu_item = tk.Menu(self.parent, tearoff = 0)
-
-    def _show_menu(self, event) -> None:
+    def _show_menu(self, event):
         try:
             if not self.keys_view.selected_item.is_explicit:
                 return
@@ -243,13 +254,8 @@ class RegistryDetailsView():
             # Nothing selected
             return
 
-        item = self.details.identify_row(event.y)
-        menu = self.menu_item if item else self.menu_freespace
-
-        try:
-            menu.tk_popup(event.x_root, event.y_root)
-        finally:
-            menu.grab_release()
+        self.menu.show(event, self.details.identify_row(event.y))
+        
 
 class EditValueView():
 
