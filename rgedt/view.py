@@ -54,6 +54,36 @@ class View(tk.Frame):
     def set_current_key_values(self, current_values) -> None:
         self.details_view.show_values(current_values)
 
+class RegistryKeyItem():
+    def __init__(self, tree: ttk.Treeview, id: str):
+        self._id = id
+        self._tree = tree
+        self._item = self._tree.item(self._id)
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def path(self) -> str:
+        path = []
+        path.append(self._item["text"])
+        current_item: str = self._id
+
+        while (parent := self._tree.parent(current_item)) != "":
+            tree_item = self._tree.item(parent)
+            path.append(tree_item["text"])
+            current_item = parent
+
+        # TODO: Is there a better way?
+        path.pop() # "Computer"
+
+        return REGISTRY_PATH_SEPARATOR.join(reversed(path))
+
+    @property
+    def is_explicit(self) -> bool:
+        return EXPLICIT_TAG in self._item["tags"]
+
 class RegistryKeysView():
 
     def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
@@ -98,35 +128,17 @@ class RegistryKeysView():
 
     @property
     def selected_item(self):
-        return self.tree.selection()[0]
-
-    @property
-    def selected_path(self):
-        return self._get_registry_path(self.selected_item)
+        return RegistryKeyItem(self.tree, self.tree.selection()[0])
 
     def _registry_key_selected(self, event) -> None:
-        self.callbacks[Events.KEY_SELECTED](self.selected_path, EXPLICIT_TAG in self.tree.item(self.selected_item)["tags"])
+        selected_item = self.selected_item
+        self.callbacks[Events.KEY_SELECTED](selected_item.path, selected_item.is_explicit)
 
     def enable_test_mode(self) -> None:
         style = ttk.Style(self.parent)
         background = "#fcf5d8"
         style.configure("Treeview", background = background, fieldbackground = background)
 
-    def _get_registry_path(self, selected_item) -> str:
-        path = []
-        tree_item = self.tree.item(selected_item)
-        path.append(tree_item["text"])
-        current_item = selected_item
-
-        while (parent := self.tree.parent(current_item)) != "":
-            tree_item = self.tree.item(parent)
-            path.append(tree_item["text"])
-            current_item = parent
-
-        # TODO: Is there a better way?
-        path.pop() # "Computer"
-
-        return REGISTRY_PATH_SEPARATOR.join(reversed(path))
 
 class RegistryDetailsView():
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
@@ -149,6 +161,9 @@ class RegistryDetailsView():
         self.details.bind("<Return>", self._popup_edit_value_window)
 
         self.details.pack(side = tk.RIGHT)
+
+        self._create_menus()
+        self.details.bind("<Button-3>", self._show_menu)
 
     def reset(self) -> None:
         self.details.delete(*self.details.get_children())
@@ -184,7 +199,7 @@ class RegistryDetailsView():
             name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
             data = '' if EMPTY_VALUE_TAG in tree_item["tags"] else tree_item_values.data
 
-            edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_path, 
+            edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_item.path, 
                                                                                       name,
                                                                                       tree_item_values.data_type,
                                                                                       new_value)
@@ -202,6 +217,39 @@ class RegistryDetailsView():
 
         for value in values:
             self._add_entry(value.name, value.data, value.data_type.name)
+
+    def _create_menus(self) -> None:
+        self.menu_freespace = tk.Menu(self.parent, tearoff = 0)
+        freespace_new_menu = tk.Menu(self.parent, tearoff = 0)
+
+        self.menu_freespace.add_cascade(label="New", menu=freespace_new_menu)
+
+        freespace_new_menu.add_command(label ="Key")
+        freespace_new_menu.add_separator()
+        freespace_new_menu.add_command(label ="String Value")
+        #freespace_new_menu.add_command(label ="Binary Value")
+        freespace_new_menu.add_command(label ="DWORD (32 bit) value")
+        #freespace_new_menu.add_command(label ="QWORD (64 bit) value")
+        #freespace_new_menu.add_command(label ="Multi-String value")
+        #freespace_new_menu.add_command(label ="Expandable String value")
+
+        self.menu_item = tk.Menu(self.parent, tearoff = 0)
+
+    def _show_menu(self, event) -> None:
+        try:
+            if not self.keys_view.selected_item.is_explicit:
+                return
+        except IndexError:
+            # Nothing selected
+            return
+
+        item = self.details.identify_row(event.y)
+        menu = self.menu_item if item else self.menu_freespace
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
 
 class EditValueView():
 
@@ -442,7 +490,6 @@ class EditDwordView(EditValueView):
                 return False
             return True
         except ValueError as e:
-            raise e
             return False
 
 
