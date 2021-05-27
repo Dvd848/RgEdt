@@ -165,7 +165,8 @@ class RegistryDetailsView():
 
         self.details.pack(side = tk.RIGHT)
 
-        self.menu = RegistryDetailsMenu(self.parent)
+        self.freespace_menu = RegistryDetailsFreespaceMenu(self.parent)
+        self.item_menu = RegistryDetailsItemMenu(self.parent)
         self.details.bind("<Button-3>", self._show_menu)
 
     def reset(self) -> None:
@@ -229,7 +230,11 @@ class RegistryDetailsView():
             # Nothing selected
             return
 
-        self.menu.show(event, self.details.identify_row(event.y))
+        if self.details.identify_row(event.y):
+            # Menu triggered for item
+            self.item_menu.show(event)
+        else:
+            self.freespace_menu.show(event)
         
 
 

@@ -5,26 +5,31 @@ class RegistryDetailsMenu():
     def __init__(self, parent):
         self.parent = parent
 
-        self.menu_freespace = tk.Menu(self.parent, tearoff = 0)
-        freespace_new_menu = tk.Menu(self.parent, tearoff = 0)
-
-        self.menu_freespace.add_cascade(label="New", menu=freespace_new_menu)
-
-        freespace_new_menu.add_command(label ="Key")
-        freespace_new_menu.add_separator()
-        freespace_new_menu.add_command(label ="String Value")
-        #freespace_new_menu.add_command(label ="Binary Value")
-        freespace_new_menu.add_command(label ="DWORD (32 bit) value")
-        #freespace_new_menu.add_command(label ="QWORD (64 bit) value")
-        #freespace_new_menu.add_command(label ="Multi-String value")
-        #freespace_new_menu.add_command(label ="Expandable String value")
-
-        self.menu_item = tk.Menu(self.parent, tearoff = 0)
-
-    def show(self, event, item) -> None:
-        menu = self.menu_item if item else self.menu_freespace
-
+    def show(self, event) -> None:
         try:
-            menu.tk_popup(event.x_root, event.y_root)
+            self.menu.tk_popup(event.x_root, event.y_root)
         finally:
-            menu.grab_release()
+            self.menu.grab_release()
+
+class RegistryDetailsFreespaceMenu(RegistryDetailsMenu):
+    def __init__(self, parent):
+        super().__init__(parent)
+        
+        self.menu = tk.Menu(self.parent, tearoff = 0)
+        new_item_menu = tk.Menu(self.parent, tearoff = 0)
+
+        self.menu.add_cascade(label="New", menu=new_item_menu)
+
+        new_item_menu.add_command(label ="Key")
+        new_item_menu.add_separator()
+        new_item_menu.add_command(label ="String Value")
+        #new_item_menu.add_command(label ="Binary Value")
+        new_item_menu.add_command(label ="DWORD (32 bit) value")
+        #new_item_menu.add_command(label ="QWORD (64 bit) value")
+        #new_item_menu.add_command(label ="Multi-String value")
+        #new_item_menu.add_command(label ="Expandable String value")
+
+class RegistryDetailsItemMenu(RegistryDetailsMenu):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.menu = tk.Menu(self.parent, tearoff = 0)
