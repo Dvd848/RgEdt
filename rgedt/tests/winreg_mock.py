@@ -1,6 +1,7 @@
 from typing import Literal, Optional, Tuple
 from collections import namedtuple
 import xml.etree.ElementTree as ET
+import string, random
 
 # Constants
 
@@ -90,17 +91,25 @@ class PyHKEY(object):
     def __init__(self, element: ET.Element, access: Literal[_ACCESS_RIGHTS]): 
         self._element = element
         self._access = access
+        self._is_closed = False
 
     @property
     def element(self):
+        self._check_handle()
         return self._element
 
     @property
     def access(self):
+        self._check_handle()
         return self._access
 
     def is_allowed(self, action: Literal[_ACCESS_RIGHTS]):
+        self._check_handle()
         return self.access & action
+
+    def _check_handle(self):
+        if self._is_closed:
+            raise OSError("The handle is invalid")
           
     def __enter__(self): 
         return self
@@ -109,7 +118,7 @@ class PyHKEY(object):
         pass
 
     def Close(self):
-        raise NotImplementedError("Close() functionality isn't implemented")
+        self._is_closed = True
 
     def Detach(self):
         raise NotImplementedError("Detach() functionality isn't implemented")
@@ -138,6 +147,44 @@ def ConnectRegistry(computer_name: Optional[str], key: Literal[_HKEY_MAPPING.key
         return PyHKEY(element, access = KEY_READ)
     except KeyError as e:
         raise OSError("Handle is invalid") from e
+    except OSError as e:
+        raise e
+    except Exception as e:
+        raise OSError("General Error") from e
+
+def CreateKey(key: PyHKEY, sub_key: str) -> PyHKEY:
+    if __registry is None:
+        raise RuntimeError("Please initialize the registry first via InitRegistry()")
+
+    if not key.is_allowed(KEY_CREATE_SUB_KEY):
+        raise PermissionError("Access is denied")
+
+    handle = None
+    subkey_names = sub_key.split(_SEPARATOR)
+    missing_subkey_names = []
+    while len(subkey_names) > 0:
+        try:
+            handle = OpenKey(key, _SEPARATOR.join(subkey_names), access = KEY_ALL_ACCESS)
+            break
+        except OSError:
+            missing_subkey_names.insert(0, subkey_names.pop())
+    
+    # handle is innermost existing key
+
+    if len(missing_subkey_names) == 0:
+        assert(handle is not None)
+        return handle
+
+    if handle is None:
+        handle = PyHKEY(key.element, access = KEY_ALL_ACCESS)
+
+    try:
+        while (len(missing_subkey_names) > 0):
+            current_name = missing_subkey_names.pop(0)
+            subkey_elem = ET.SubElement(handle.element, "key", name = current_name)
+            handle.Close()
+            handle = PyHKEY(subkey_elem, access = KEY_ALL_ACCESS)
+        return handle
     except OSError as e:
         raise e
     except Exception as e:
@@ -299,6 +346,10 @@ if __name__ == "__main__":
 
             InitRegistry(registry)
 
+        @classmethod
+        def random_str(cls, length = 6):
+            return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+
         def test_basic_1(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet") as handle:
@@ -325,7 +376,7 @@ if __name__ == "__main__":
         def test_no_such_key(self):
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
                 with self.assertRaises(OSError):
-                    key = OpenKey(root_key_handle, r"NoSuchKey")
+                    key = OpenKey(root_key_handle, self.random_str())
 
         def test_empty_subkey(self):
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
@@ -346,7 +397,7 @@ if __name__ == "__main__":
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_READ) as handle:
                     with self.assertRaises(PermissionError):
-                        SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
+                        SetValueEx(handle, self.random_str(), 0, REG_SZ, self.random_str())
 
         def test_query_value(self):
             with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
@@ -361,23 +412,81 @@ if __name__ == "__main__":
         def test_write(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
-                    SetValueEx(handle, "v1", 0, REG_SZ, "d1_new")
-                    self.assertEqual(QueryValueEx(handle, "v1"), ("d1_new", REG_SZ))
+                    new_data = self.random_str()
+                    SetValueEx(handle, "v1", 0, REG_SZ, new_data)
+                    self.assertEqual(QueryValueEx(handle, "v1"), (new_data, REG_SZ))
 
         
         def test_write_new_value(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
-                    SetValueEx(handle, "nonexistant_key", 0, REG_SZ, "new_value")
-                    self.assertEqual(QueryValueEx(handle, "nonexistant_key"), ("new_value", REG_SZ))
+                    name = self.random_str()
+                    data = self.random_str()
+                    SetValueEx(handle, name, 0, REG_SZ, data)
+                    self.assertEqual(QueryValueEx(handle, name), (data, REG_SZ))
 
         def test_write_change_value_type(self):
             with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
                 with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as handle:
-                    SetValueEx(handle, "nonexistant_key_str", 0, REG_SZ, "new_value")
-                    self.assertEqual(QueryValueEx(handle, "nonexistant_key_str"), ("new_value", REG_SZ))
-                    SetValueEx(handle, "nonexistant_key_str", 0, REG_DWORD, 123)
-                    self.assertEqual(QueryValueEx(handle, "nonexistant_key_str"), (123, REG_DWORD))
+                    name = self.random_str()
+                    data = self.random_str()
+                    SetValueEx(handle, name, 0, REG_SZ, data)
+                    self.assertEqual(QueryValueEx(handle, name), (data, REG_SZ))
+
+                    data = 123
+                    SetValueEx(handle, name, 0, REG_DWORD, data)
+                    self.assertEqual(QueryValueEx(handle, name), (data, REG_DWORD))
+
+        def test_create_key_leaf(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as sub_handle:
+                    key = self.random_str()
+                    name = self.random_str()
+                    data = self.random_str()
+                    with CreateKey(sub_handle, key) as handle:
+                        SetValueEx(handle, name, 0, REG_SZ, data)
+                    with OpenKey(sub_handle, key) as handle:
+                        self.assertEqual(QueryValueEx(handle, name), (data, REG_SZ))
+
+        def test_create_key_path_partially_exists(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System", access = KEY_ALL_ACCESS) as sub_handle:
+                    key = r"CurrentControlSet\{}".format(self.random_str())
+                    name = self.random_str()
+                    data = self.random_str()
+                    with CreateKey(sub_handle, key) as handle:
+                        SetValueEx(handle, name, 0, REG_SZ, data)
+                    with OpenKey(sub_handle, key) as handle:
+                        self.assertEqual(QueryValueEx(handle, name), (data, REG_SZ))
+
+        def test_create_key_path_fully_exists(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System", access = KEY_ALL_ACCESS) as sub_handle:
+                    key = r"CurrentControlSet"
+                    name = self.random_str()
+                    data = self.random_str()
+                    with CreateKey(sub_handle, key) as handle:
+                        SetValueEx(handle, name, 0, REG_SZ, data)
+                    with OpenKey(sub_handle, key) as handle:
+                        self.assertEqual(QueryValueEx(handle, name), (data, REG_SZ))
+
+        def test_create_multiple_keys(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_ALL_ACCESS) as sub_handle:
+                    keys = [self.random_str() for _ in range(3)]
+                    handle = CreateKey(sub_handle, _SEPARATOR.join(keys))
+                    handle.Close()
+                    path = []
+                    for key in keys:
+                        path.append(key)
+                        handle = OpenKey(sub_handle, _SEPARATOR.join(path))
+                        handle.Close()
+
+        def test_create_key_no_permissions(self):
+            with ConnectRegistry(None, HKEY_CURRENT_USER) as root_key_handle:
+                with OpenKey(root_key_handle, r"System\CurrentControlSet", access = KEY_READ) as sub_handle:
+                    with self.assertRaises(PermissionError):
+                        CreateKey(sub_handle, self.random_str())
                 
 
     unittest.main()
