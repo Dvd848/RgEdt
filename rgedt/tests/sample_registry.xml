@@ -184,6 +184,9 @@
             <key name='EditMe'>
                 <value name='string' data='test' type='REG_SZ' />
             </key>
+            <key name='AddToMe'>
+                
+            </key>
             <key name='types'>
                 <value name='type_str' data='test' type='REG_SZ' />
                 <value name='type_bin' data='112233' type='REG_BINARY' />

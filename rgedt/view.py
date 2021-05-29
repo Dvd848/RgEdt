@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import simpledialog
 from tkinter import ttk
 from collections import namedtuple
 import enum
@@ -14,6 +15,7 @@ from .common import *
 class Events(enum.Enum):
     KEY_SELECTED = enum.auto()
     EDIT_VALUE   = enum.auto()
+    ADD_KEY      = enum.auto()
 
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
@@ -129,7 +131,7 @@ class RegistryKeysView():
             self.build_registry_tree(subkey, sub_tree)
 
     @property
-    def selected_item(self):
+    def selected_item(self) -> RegistryKeyItem:
         return RegistryKeyItem(self.tree, self.tree.selection()[0])
 
     def _registry_key_selected(self, event) -> None:
@@ -140,6 +142,13 @@ class RegistryKeysView():
         style = ttk.Style(self.parent)
         background = "#fcf5d8"
         style.configure("Treeview", background = background, fieldbackground = background)
+
+    def create_new_key(self) -> None:
+        key_name =  simpledialog.askstring("Key Name", "Please enter key name",
+                                parent=self.parent)
+        if key_name:
+            self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name)
+            self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, tags = (EXPLICIT_TAG, ))
 
 
 
@@ -165,7 +174,9 @@ class RegistryDetailsView():
 
         self.details.pack(side = tk.RIGHT)
 
-        self.freespace_menu = RegistryDetailsFreespaceMenu(self.parent)
+        self.freespace_menu = RegistryDetailsFreespaceMenu(self.parent, {
+            RegistryDetailsFreespaceMenu.Events.NEW_ITEM: self._new_item
+        })
         self.item_menu = RegistryDetailsItemMenu(self.parent)
         self.details.bind("<Button-3>", self._show_menu)
 
@@ -222,7 +233,7 @@ class RegistryDetailsView():
         for value in values:
             self._add_entry(value.name, value.data, value.data_type.name)
 
-    def _show_menu(self, event):
+    def _show_menu(self, event) -> None:
         try:
             if not self.keys_view.selected_item.is_explicit:
                 return
@@ -237,6 +248,10 @@ class RegistryDetailsView():
             self.freespace_menu.show(event)
         
 
-
+    def _new_item(self, item: RegistryDetailsFreespaceMenu.Items) -> None:
+        if item == RegistryDetailsFreespaceMenu.Items.KEY:
+            self.keys_view.create_new_key()
+        else:
+            raise RuntimeError(f"Unknown item {item}")
 
     

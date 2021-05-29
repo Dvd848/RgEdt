@@ -1,4 +1,8 @@
+from typing import Dict, Callable
+
 import tkinter as tk
+import enum
+
 
 class RegistryDetailsMenu():
 
@@ -11,23 +15,50 @@ class RegistryDetailsMenu():
         finally:
             self.menu.grab_release()
 
+
+    
+
 class RegistryDetailsFreespaceMenu(RegistryDetailsMenu):
-    def __init__(self, parent):
+    class Events(enum.Enum):
+        NEW_ITEM = enum.auto()
+
+    class Items(enum.Enum):
+        KEY    = enum.auto()
+        STRING = enum.auto()
+        DWORD  = enum.auto()
+
+    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
         super().__init__(parent)
+
+        if callbacks.keys() != set(self.Events):
+            raise KeyError(f"Callbacks must contain all events in {set(self.Events)} ")
+        self.callbacks = callbacks
         
         self.menu = tk.Menu(self.parent, tearoff = 0)
         new_item_menu = tk.Menu(self.parent, tearoff = 0)
 
         self.menu.add_cascade(label="New", menu=new_item_menu)
 
-        new_item_menu.add_command(label ="Key")
+        new_item_menu.add_command(label ="Key", command = self._new_key)
         new_item_menu.add_separator()
-        new_item_menu.add_command(label ="String Value")
+        new_item_menu.add_command(label ="String Value", command = self._new_string)
         #new_item_menu.add_command(label ="Binary Value")
-        new_item_menu.add_command(label ="DWORD (32 bit) value")
+        new_item_menu.add_command(label ="DWORD (32 bit) value", command = self._new_dword)
         #new_item_menu.add_command(label ="QWORD (64 bit) value")
         #new_item_menu.add_command(label ="Multi-String value")
         #new_item_menu.add_command(label ="Expandable String value")
+
+    def _new_item(self, item: "RegistryDetailsFreespaceMenu.Items") -> None:
+        self.callbacks[self.Events.NEW_ITEM](item)
+
+    def _new_key(self) -> None:
+        self._new_item(self.Items.KEY)
+
+    def _new_string(self) -> None:
+        self._new_item(self.Items.STRING)
+
+    def _new_dword(self) -> None:
+        self._new_item(self.Items.DWORD)
 
 class RegistryDetailsItemMenu(RegistryDetailsMenu):
     def __init__(self, parent):

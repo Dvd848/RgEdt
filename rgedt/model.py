@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Union, Optional, Set
+from typing import List, Tuple, Dict, Union, Optional, Set, Any
 from pprint import pprint as pp
 from collections import UserDict
 from collections import namedtuple
@@ -151,7 +151,7 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
 
-    def get_registry_key_value(self, key: str, value_name: str):
+    def get_registry_key_value(self, key: str, value_name: str) -> Any:
         try:
             root_key_const, rest_of_key = self._split_key(key)
 
@@ -163,7 +163,7 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
 
-    def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value):
+    def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value) -> None:
         try:
             root_key_const, rest_of_key = self._split_key(key)
 
@@ -174,4 +174,14 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't set value '{value_name}' for key '{key}'") from e
 
+    def add_key(self, key: str, name: str) -> None:
+        try:
+            root_key_const, rest_of_key = self._split_key(key)
+
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, rest_of_key, access = registry.winreg.KEY_WRITE) as sub_key_handle:
+                    registry.winreg.CreateKey(sub_key_handle, name)
+
+        except Exception as e:
+            raise RgEdtException(f"Can't create key '{name}' under '{key}'") from e
 

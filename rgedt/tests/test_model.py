@@ -240,6 +240,19 @@ class TestModel(unittest.TestCase):
 
         self.assertEqual(value, new_value)
 
+    def test_add_key(self):
+        key = r"HKEY_LOCAL_MACHINE\SYSTEM\AddToMe"
+        name = "AddedKey"
+        full_key = f"{key}\{name}"
+        value_name = "string"
+        new_value = "new_value"
+        self.model.add_key(key, name)
+        self.model.edit_registry_key_value(full_key, value_name, "REG_SZ", new_value)
+        value = self.model.get_registry_key_value(full_key, value_name)
+        self.assertEqual(value, new_value)
+
+
+
 # From root folder:
 #   python -m unittest rgedt.tests.test_model
 #   python -m rgedt.tests.test_model
