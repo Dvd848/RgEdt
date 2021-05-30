@@ -56,23 +56,23 @@ REG_SZ                          = 14
 def _NotImplemented(msg = None): 
     raise NotImplementedError(msg)
 
-_TypeRecord = namedtuple("TypeRecord", "type_str function") 
+_TypeRecord = namedtuple("TypeRecord", "type_str deserialize serialize default") 
 
 _TYPE_MAPPING = {
-    REG_BINARY:                       _TypeRecord("REG_BINARY",                     bytes.fromhex),
-    REG_DWORD:                        _TypeRecord("REG_DWORD",                      int),
-    REG_DWORD_LITTLE_ENDIAN:          _TypeRecord("REG_DWORD_LITTLE_ENDIAN",        int),
-    REG_DWORD_BIG_ENDIAN:             _TypeRecord("REG_DWORD_BIG_ENDIAN",           lambda x: _NotImplemented()),
-    REG_EXPAND_SZ:                    _TypeRecord("REG_EXPAND_SZ",                  str),
-    REG_LINK:                         _TypeRecord("REG_LINK",                       lambda x: _NotImplemented()),
-    REG_MULTI_SZ:                     _TypeRecord("REG_MULTI_SZ",                   lambda x: x.split("\\n")),
-    REG_NONE:                         _TypeRecord("REG_NONE",                       lambda x: _NotImplemented()),
-    REG_QWORD:                        _TypeRecord("REG_QWORD",                      int),
-    REG_QWORD_LITTLE_ENDIAN:          _TypeRecord("REG_QWORD_LITTLE_ENDIAN",        int),
-    REG_RESOURCE_LIST:                _TypeRecord("REG_RESOURCE_LIST",              lambda x: _NotImplemented()),
-    REG_FULL_RESOURCE_DESCRIPTOR:     _TypeRecord("REG_FULL_RESOURCE_DESCRIPTOR",   lambda x: _NotImplemented()),
-    REG_RESOURCE_REQUIREMENTS_LIST:   _TypeRecord("REG_RESOURCE_REQUIREMENTS_LIST", lambda x: _NotImplemented()),
-    REG_SZ:                           _TypeRecord("REG_SZ",                         str),
+    REG_BINARY:                     _TypeRecord("REG_BINARY",                     bytes.fromhex,               lambda x: x.hex(),           b''),
+    REG_DWORD:                      _TypeRecord("REG_DWORD",                      int,                         lambda x: str(int(x)),       0),
+    REG_DWORD_LITTLE_ENDIAN:        _TypeRecord("REG_DWORD_LITTLE_ENDIAN",        int,                         lambda x: str(int(x)),       0),
+    REG_DWORD_BIG_ENDIAN:           _TypeRecord("REG_DWORD_BIG_ENDIAN",           lambda x: _NotImplemented(), lambda x: _NotImplemented(), 0),
+    REG_EXPAND_SZ:                  _TypeRecord("REG_EXPAND_SZ",                  str,                         str,                         ""),
+    REG_LINK:                       _TypeRecord("REG_LINK",                       lambda x: _NotImplemented(), lambda x: _NotImplemented(), ""),
+    REG_MULTI_SZ:                   _TypeRecord("REG_MULTI_SZ",                   lambda x: x.split("\\n"),    lambda x: "\\n".join(x),     ""),
+    REG_NONE:                       _TypeRecord("REG_NONE",                       lambda x: _NotImplemented(), lambda x: _NotImplemented(), ""),
+    REG_QWORD:                      _TypeRecord("REG_QWORD",                      int,                         lambda x: str(int(x)),       0),
+    REG_QWORD_LITTLE_ENDIAN:        _TypeRecord("REG_QWORD_LITTLE_ENDIAN",        int,                         lambda x: str(int(x)),       0),
+    REG_RESOURCE_LIST:              _TypeRecord("REG_RESOURCE_LIST",              lambda x: _NotImplemented(), lambda x: _NotImplemented(), ""),
+    REG_FULL_RESOURCE_DESCRIPTOR:   _TypeRecord("REG_FULL_RESOURCE_DESCRIPTOR",   lambda x: _NotImplemented(), lambda x: _NotImplemented(), ""),
+    REG_RESOURCE_REQUIREMENTS_LIST: _TypeRecord("REG_RESOURCE_REQUIREMENTS_LIST", lambda x: _NotImplemented(), lambda x: _NotImplemented(), ""),
+    REG_SZ:                         _TypeRecord("REG_SZ",                         str,                         str,                         ""),
     }
 
 def _type_str_to_type(type_str: str):
@@ -251,7 +251,7 @@ def EnumValue(key: PyHKEY, index: int) -> Tuple[str, object, int]:
         type_const = _type_str_to_type(value.get("type"))
         type_record = _TYPE_MAPPING[type_const]
         data = value.get("data")
-        return (name, type_record.function(data), type_const)
+        return (name, type_record.deserialize(data), type_const)
     except OSError as e:
         raise e
     except Exception as e:
@@ -267,14 +267,19 @@ def SetValueEx(key: PyHKEY, value_name: str, reserved, value_type: Literal[list(
     if not value_type in _TYPE_MAPPING:
         raise TypeError(f"Unknown type {value_type}")
 
-    # TODO: Convert each type to correct representation
+    type_record = _TYPE_MAPPING[value_type]
+
+    try:
+        serialized_value = type_record.serialize(value)
+    except Exception:
+        serialized_value = type_record.serialize(type_record.default)
 
     try:
         value_elem = key.element.find(f"./value[@name='{value_name}']")
         if value_elem is None:
-            value_elem = ET.SubElement(key.element, "value", name = value_name, data = value, type = _TYPE_MAPPING[value_type].type_str)
+            value_elem = ET.SubElement(key.element, "value", name = value_name, data = serialized_value, type = _TYPE_MAPPING[value_type].type_str)
         else:
-            value_elem.set("data", str(value))
+            value_elem.set("data", serialized_value)
             value_elem.set("type", _TYPE_MAPPING[value_type].type_str)
     except OSError as e:
         raise e
@@ -296,7 +301,7 @@ def QueryValueEx(key: PyHKEY, value_name: str):
         type_const = _type_str_to_type(value_elem.get("type"))
         type_record = _TYPE_MAPPING[type_const]
 
-        return (type_record.function(value_elem.get("data")), type_const)
+        return (type_record.deserialize(value_elem.get("data")), type_const)
     except OSError as e:
         raise e
     except Exception as e:

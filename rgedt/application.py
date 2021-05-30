@@ -42,7 +42,7 @@ class Application(tk.Tk):
         else:
             self.view.reset_details()
 
-    def cb_edit_value(self, path: str, data_name: str, data_type: int, new_value) -> None:
+    def cb_edit_value(self, path: str, data_name: str, data_type: str, new_value) -> None:
         self.model.edit_registry_key_value(path, data_name, data_type, new_value)
         self._display_current_key_values(path)
 

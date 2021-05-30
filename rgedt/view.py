@@ -155,6 +155,11 @@ class RegistryKeysView():
 class RegistryDetailsView():
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
 
+    _menu_item_to_winreg_data_type_str = {
+        RegistryDetailsFreespaceMenu.Items.DWORD: "REG_DWORD",
+        RegistryDetailsFreespaceMenu.Items.STRING: "REG_SZ",
+    }
+
     def __init__(self, parent, keys_view: RegistryKeysView, callbacks: Dict[Events, Callable[..., None]]):
         self.parent = parent
         self.keys_view = keys_view
@@ -252,6 +257,15 @@ class RegistryDetailsView():
         if item == RegistryDetailsFreespaceMenu.Items.KEY:
             self.keys_view.create_new_key()
         else:
-            raise RuntimeError(f"Unknown item {item}")
+            try:
+                data_type = self._menu_item_to_winreg_data_type_str[item]
+                value_name =  simpledialog.askstring("Value Name", "Please enter value name",
+                                    parent=self.parent)
+                if value_name:
+                    self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_item.path, 
+                                                        value_name,
+                                                        data_type,
+                                                        '')
+            except KeyError:
+                raise RuntimeError(f"Unknown item {item}")
 
-    

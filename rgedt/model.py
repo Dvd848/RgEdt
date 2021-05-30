@@ -180,7 +180,8 @@ class Model(object):
 
             with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
                 with registry.winreg.OpenKey(root_key_handle, rest_of_key, access = registry.winreg.KEY_WRITE) as sub_key_handle:
-                    registry.winreg.CreateKey(sub_key_handle, name)
+                    handle = registry.winreg.CreateKey(sub_key_handle, name)
+                    handle.Close()
 
         except Exception as e:
             raise RgEdtException(f"Can't create key '{name}' under '{key}'") from e
