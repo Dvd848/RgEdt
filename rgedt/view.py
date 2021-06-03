@@ -32,17 +32,21 @@ class View(tk.Frame):
         self.parent = parent
         self.callbacks = callbacks
 
+        self.menubar = RegistryMenuBar(self)
+        parent.config(menu=self.menubar)
+
+        self.top_frame = tk.Frame()
+        self.address_bar = RegistryAddressBar(self.top_frame)
+        self.top_frame.pack(side=tk.TOP, fill = tk.BOTH)
+
         self.pw = tk.PanedWindow(orient = 'horizontal') 
-        self.keys_view = RegistryKeysView(self.pw, self.callbacks)
+        self.keys_view = RegistryKeysView(self.pw, self.address_bar, self.callbacks)
         self.details_view = RegistryDetailsView(self.pw, self.keys_view, self.callbacks)
 
         self.pw.add(self.keys_view.widget, width = 400)
         self.pw.add(self.details_view.widget)
-        self.pw.pack(fill = tk.BOTH, expand = True) 
+        self.pw.pack(fill = tk.BOTH, expand = True, side = tk.BOTTOM) 
         self.pw.configure(sashrelief = tk.RAISED)
-
-        self.menubar = RegistryMenuBar(self)
-        parent.config(menu=self.menubar)
 
         self.reset()
 
@@ -61,6 +65,23 @@ class View(tk.Frame):
 
     def set_current_key_values(self, current_values) -> None:
         self.details_view.show_values(current_values)
+
+class RegistryAddressBar():
+    def __init__(self, parent):
+        self.parent = parent
+
+        self.address_bar = tk.Entry(parent, borderwidth=4, relief=tk.FLAT)
+        self.address_bar.pack(fill = tk.BOTH)
+
+        self.address_bar.config(state="readonly")
+
+        self.set_address("test")
+
+    def set_address(self, address) -> None:
+        self.address_bar.config(state="normal")
+        self.address_bar.delete(0, tk.END)
+        self.address_bar.insert(0, address)
+        self.address_bar.config(state="readonly")
 
 class RegistryKeyItem():
     def __init__(self, tree: ttk.Treeview, id: str):
@@ -94,9 +115,10 @@ class RegistryKeyItem():
 
 class RegistryKeysView():
 
-    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
+    def __init__(self, parent, address_bar: RegistryAddressBar, callbacks: Dict[Events, Callable[..., None]]):
         self.parent = parent
         self.callbacks = callbacks
+        self.address_bar = address_bar
 
         self.tree = ttk.Treeview(parent, show = 'tree', selectmode = 'browse')
         self.tree.pack(side = tk.LEFT)
@@ -141,6 +163,7 @@ class RegistryKeysView():
     def _registry_key_selected(self, event) -> None:
         selected_item = self.selected_item
         self.callbacks[Events.KEY_SELECTED](selected_item.path, selected_item.is_explicit)
+        self.address_bar.set_address(selected_item.path)
 
     def enable_test_mode(self) -> None:
         style = ttk.Style(self.parent)
