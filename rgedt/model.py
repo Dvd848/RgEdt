@@ -20,6 +20,8 @@ class Model(object):
         "HKCC"                  : "HKEY_CURRENT_CONFIG"
     }
 
+    _COMPUTER_ROOT_STR = "Computer"
+
     _ROOT_KEY_SHORT_REGEX =  re.compile("^(" + r")|^(".join(_ROOT_KEY_SHORT.keys()) + ")")
 
     def __init__(self, **config):
@@ -27,7 +29,7 @@ class Model(object):
         self.computer_name      = config.get("computer_name", None)
 
     def get_registry_tree(self, key_paths: List[str]) -> RegistryKey:
-        computer = RegistryKey(name = "Computer")
+        computer = RegistryKey(name = self._COMPUTER_ROOT_STR)
 
         reduced_key_paths = self._remove_contained_paths(key_paths)
 
@@ -133,8 +135,15 @@ class Model(object):
 
         return (root_key_const, rest_of_key)
 
+    @classmethod
+    def _normalize_key_string(cls, key: str) -> str:
+        prefix = cls._COMPUTER_ROOT_STR + REGISTRY_PATH_SEPARATOR
+        if key.startswith(prefix):
+            key = key.replace(prefix, "")
+        return key
 
     def get_registry_key_values(self, key: str) -> List[RegistryValue]:
+        key = self._normalize_key_string(key)
         try:
             values = []
 
@@ -152,6 +161,7 @@ class Model(object):
             raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
 
     def get_registry_key_value(self, key: str, value_name: str) -> Any:
+        key = self._normalize_key_string(key)
         try:
             root_key_const, rest_of_key = self._split_key(key)
 
@@ -164,6 +174,7 @@ class Model(object):
             raise RgEdtException(f"Can't retrieve value {value_name} for key '{key}'") from e
 
     def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value) -> None:
+        key = self._normalize_key_string(key)
         try:
             root_key_const, rest_of_key = self._split_key(key)
 
@@ -175,6 +186,7 @@ class Model(object):
             raise RgEdtException(f"Can't set value '{value_name}' for key '{key}'") from e
 
     def add_key(self, key: str, name: str) -> None:
+        key = self._normalize_key_string(key)
         try:
             root_key_const, rest_of_key = self._split_key(key)
 

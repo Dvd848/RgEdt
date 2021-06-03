@@ -104,9 +104,6 @@ class RegistryKeyItem():
             path.append(tree_item["text"])
             current_item = parent
 
-        # TODO: Is there a better way?
-        path.pop() # "Computer"
-
         return REGISTRY_PATH_SEPARATOR.join(reversed(path))
 
     @property
