@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
 from tkinter import ttk
 from collections import namedtuple
 import enum
@@ -16,6 +16,7 @@ class Events(enum.Enum):
     KEY_SELECTED = enum.auto()
     EDIT_VALUE   = enum.auto()
     ADD_KEY      = enum.auto()
+    ADD_VALUE    = enum.auto()
 
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
@@ -147,8 +148,10 @@ class RegistryKeysView():
         key_name =  simpledialog.askstring("Key Name", "Please enter key name",
                                 parent=self.parent)
         if key_name:
-            self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name)
-            self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, tags = (EXPLICIT_TAG, ))
+            if self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name):
+                self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, tags = (EXPLICIT_TAG, ))
+            else:
+                messagebox.showerror("Error", "Could not add key")
 
 
 
@@ -262,10 +265,11 @@ class RegistryDetailsView():
                 value_name =  simpledialog.askstring("Value Name", "Please enter value name",
                                     parent=self.parent)
                 if value_name:
-                    self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_item.path, 
+                    if not self.callbacks[Events.ADD_VALUE](self.keys_view.selected_item.path, 
                                                         value_name,
                                                         data_type,
-                                                        '')
+                                                        ''):
+                        messagebox.showerror("Error", "Could not add value")
             except KeyError:
                 raise RuntimeError(f"Unknown item {item}")
 

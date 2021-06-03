@@ -161,7 +161,7 @@ class Model(object):
                     return value
 
         except Exception as e:
-            raise RgEdtException(f"Can't retrieve values for key '{key}'") from e
+            raise RgEdtException(f"Can't retrieve value {value_name} for key '{key}'") from e
 
     def edit_registry_key_value(self, key: str, value_name: str, value_type: str, new_value) -> None:
         try:
@@ -180,9 +180,16 @@ class Model(object):
 
             with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
                 with registry.winreg.OpenKey(root_key_handle, rest_of_key, access = registry.winreg.KEY_WRITE) as sub_key_handle:
-                    handle = registry.winreg.CreateKey(sub_key_handle, name)
-                    handle.Close()
+                    try:
+                        handle = registry.winreg.OpenKey(sub_key_handle, name)
+                        handle.Close()
+                        raise RgEdtException(f"Key {key}/{name} already exists")
+                    except OSError:
+                        handle = registry.winreg.CreateKey(sub_key_handle, name)
+                        handle.Close()
 
+        except RgEdtException as e:
+            raise e
         except Exception as e:
             raise RgEdtException(f"Can't create key '{name}' under '{key}'") from e
 

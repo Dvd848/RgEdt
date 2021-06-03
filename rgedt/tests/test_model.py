@@ -240,7 +240,7 @@ class TestModel(unittest.TestCase):
 
         self.assertEqual(value, new_value)
 
-    def test_add_key(self):
+    def test_add_key_new(self):
         key = r"HKEY_LOCAL_MACHINE\SYSTEM\AddToMe"
         name = "AddedKey"
         full_key = f"{key}\{name}"
@@ -250,6 +250,12 @@ class TestModel(unittest.TestCase):
         self.model.edit_registry_key_value(full_key, value_name, "REG_SZ", new_value)
         value = self.model.get_registry_key_value(full_key, value_name)
         self.assertEqual(value, new_value)
+        
+    def test_add_key_existing(self):
+        key = r"HKEY_LOCAL_MACHINE\SYSTEM"
+        name = "CurrentControlSet"
+        with self.assertRaises(common.RgEdtException):
+            self.model.add_key(key, name)
 
 
 

@@ -17,6 +17,7 @@ class Application(tk.Tk):
             v.Events.KEY_SELECTED: self.cb_key_selected,
             v.Events.EDIT_VALUE:   self.cb_edit_value,
             v.Events.ADD_KEY:      self.cb_add_key,
+            v.Events.ADD_VALUE:    self.cb_add_value,
         }
 
         self.view = v.View(self, callbacks)
@@ -46,5 +47,20 @@ class Application(tk.Tk):
         self.model.edit_registry_key_value(path, data_name, data_type, new_value)
         self._display_current_key_values(path)
 
-    def cb_add_key(self, path: str, name: str) -> None:
-        self.model.add_key(path, name)
+    def cb_add_key(self, path: str, name: str) -> bool:
+        try:
+            self.model.add_key(path, name)
+            return True
+        except Exception:
+            return False
+
+    def cb_add_value(self, path: str, data_name: str, data_type: str, new_value) -> None:
+        try:
+            self.model.get_registry_key_value(path, data_name)
+
+            # If no exception - value already exists
+            return False
+        except Exception:
+            # Value does not exist
+            self.cb_edit_value(path, data_name, data_type, new_value)
+            return True
