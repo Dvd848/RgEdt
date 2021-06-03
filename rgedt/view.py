@@ -41,6 +41,9 @@ class View(tk.Frame):
         self.pw.pack(fill = tk.BOTH, expand = True) 
         self.pw.configure(sashrelief = tk.RAISED)
 
+        self.menubar = RegistryMenuBar(self)
+        parent.config(menu=self.menubar)
+
         self.reset()
 
     def reset(self) -> None:

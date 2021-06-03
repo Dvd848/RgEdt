@@ -1,4 +1,5 @@
 from typing import Dict, Callable
+from tkinter import messagebox
 
 import tkinter as tk
 import enum
@@ -64,3 +65,20 @@ class RegistryDetailsItemMenu(RegistryDetailsMenu):
     def __init__(self, parent):
         super().__init__(parent)
         self.menu = tk.Menu(self.parent, tearoff = 0)
+
+
+class RegistryMenuBar(tk.Menu):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        filemenu = tk.Menu(self, tearoff=0)
+        #filemenu.add_separator()
+        filemenu.add_command(label="Exit", command=parent.quit)
+        self.add_cascade(label="File", menu=filemenu)
+
+        helpmenu = tk.Menu(self, tearoff=0)
+        helpmenu.add_command(label="About...", command=self.show_about)
+        self.add_cascade(label="Help", menu=helpmenu)
+
+    def show_about(self):
+        messagebox.showinfo("About", "RgEdit\n\nA simple tool to manage a subset of the registry.\n\nhttps://github.com/Dvd848/RgEdt")
