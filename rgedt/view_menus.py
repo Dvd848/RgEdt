@@ -62,9 +62,25 @@ class RegistryDetailsFreespaceMenu(RegistryDetailsMenu):
         self._new_item(self.Items.DWORD)
 
 class RegistryDetailsItemMenu(RegistryDetailsMenu):
-    def __init__(self, parent):
+    class Events(enum.Enum):
+        MODIFY_ITEM = enum.auto()
+
+    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
         super().__init__(parent)
         self.menu = tk.Menu(self.parent, tearoff = 0)
+
+        if callbacks.keys() != set(self.Events):
+            raise KeyError(f"Callbacks must contain all events in {set(self.Events)} ")
+        self.callbacks = callbacks
+
+        self.menu.add_command(label ="Modify...", command = self._modify)
+
+    def show(self, event) -> None:
+        self._current_event = event
+        super().show(event)
+
+    def _modify(self):
+        self.callbacks[self.Events.MODIFY_ITEM](self._current_event)
 
 
 class RegistryMenuBar(tk.Menu):

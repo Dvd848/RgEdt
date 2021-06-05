@@ -208,7 +208,9 @@ class RegistryDetailsView():
         self.freespace_menu = RegistryDetailsFreespaceMenu(self.parent, {
             RegistryDetailsFreespaceMenu.Events.NEW_ITEM: self._new_item
         })
-        self.item_menu = RegistryDetailsItemMenu(self.parent)
+        self.item_menu = RegistryDetailsItemMenu(self.parent, {
+            RegistryDetailsItemMenu.Events.MODIFY_ITEM: self._popup_edit_value_window
+        })
         self.details.bind("<Button-3>", self._show_menu)
 
     def reset(self) -> None:
@@ -272,8 +274,11 @@ class RegistryDetailsView():
             # Nothing selected
             return
 
-        if self.details.identify_row(event.y):
+        item = self.details.identify_row(event.y)
+        if item:
             # Menu triggered for item
+            self.details.focus(item)
+            self.details.selection_set(item)
             self.item_menu.show(event)
         else:
             self.freespace_menu.show(event)
