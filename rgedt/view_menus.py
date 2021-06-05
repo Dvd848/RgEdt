@@ -64,6 +64,7 @@ class RegistryDetailsFreespaceMenu(RegistryDetailsMenu):
 class RegistryDetailsItemMenu(RegistryDetailsMenu):
     class Events(enum.Enum):
         MODIFY_ITEM = enum.auto()
+        DELETE_ITEM = enum.auto()
 
     def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
         super().__init__(parent)
@@ -74,6 +75,8 @@ class RegistryDetailsItemMenu(RegistryDetailsMenu):
         self.callbacks = callbacks
 
         self.menu.add_command(label ="Modify...", command = self._modify)
+        self.menu.add_separator()
+        self.menu.add_command(label ="Delete", command = self._delete)
 
     def show(self, event) -> None:
         self._current_event = event
@@ -81,6 +84,9 @@ class RegistryDetailsItemMenu(RegistryDetailsMenu):
 
     def _modify(self):
         self.callbacks[self.Events.MODIFY_ITEM](self._current_event)
+
+    def _delete(self):
+        self.callbacks[self.Events.DELETE_ITEM](self._current_event)
 
 
 class RegistryMenuBar(tk.Menu):

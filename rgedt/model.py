@@ -205,3 +205,15 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't create key '{name}' under '{key}'") from e
 
+    def delete_value(self, key: str, value_name: str) -> None:
+        key = self._normalize_key_string(key)
+        try:
+            root_key_const, rest_of_key = self._split_key(key)
+
+            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                with registry.winreg.OpenKey(root_key_handle, rest_of_key, access = registry.winreg.KEY_WRITE) as sub_key_handle:
+                    registry.winreg.DeleteValue(sub_key_handle, value_name)
+
+        except Exception as e:
+            raise RgEdtException(f"Can't delete value '{value_name}' from key '{key}'") from e
+

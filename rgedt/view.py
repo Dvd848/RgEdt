@@ -17,6 +17,7 @@ class Events(enum.Enum):
     EDIT_VALUE   = enum.auto()
     ADD_KEY      = enum.auto()
     ADD_VALUE    = enum.auto()
+    DELETE_VALUE = enum.auto()
 
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
@@ -202,6 +203,7 @@ class RegistryDetailsView():
 
         self.details.bind("<Double-Button-1>", self._popup_edit_value_window)
         self.details.bind("<Return>", self._popup_edit_value_window)
+        self.details.bind("<Delete>", self._delete_value)
 
         self.details.pack(side = tk.RIGHT)
 
@@ -209,7 +211,8 @@ class RegistryDetailsView():
             RegistryDetailsFreespaceMenu.Events.NEW_ITEM: self._new_item
         })
         self.item_menu = RegistryDetailsItemMenu(self.parent, {
-            RegistryDetailsItemMenu.Events.MODIFY_ITEM: self._popup_edit_value_window
+            RegistryDetailsItemMenu.Events.MODIFY_ITEM: self._popup_edit_value_window,
+            RegistryDetailsItemMenu.Events.DELETE_ITEM: self._delete_value
         })
         self.details.bind("<Button-3>", self._show_menu)
 
@@ -256,6 +259,18 @@ class RegistryDetailsView():
 
         except IndexError:
             pass
+
+    def _delete_value(self, event) -> None:
+        delete_value = messagebox.askyesno("Delete Value", "Are you sure you want to delete this value?")
+        if delete_value:
+            # TODO: Duplication with _popup_edit_value_window
+            tree_item = self.details.item(self.selected_item)
+            tree_item_values = self.DetailsItemValues(*tree_item["values"])
+            name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
+
+            self.callbacks[Events.DELETE_VALUE](self.keys_view.selected_item.path, name)
+            
+
 
     def show_values(self, values: List[RegistryValue]) -> None:
         self.reset()

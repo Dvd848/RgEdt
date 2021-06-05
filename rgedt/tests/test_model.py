@@ -257,6 +257,21 @@ class TestModel(unittest.TestCase):
         with self.assertRaises(common.RgEdtException):
             self.model.add_key(key, name)
 
+    def test_delete_value(self):
+        key = r"HKEY_LOCAL_MACHINE\SYSTEM\DeleteMe"
+        name = "string"
+        self.model.delete_value(key, name)
+        with self.assertRaises(common.RgEdtException):
+            self.model.get_registry_key_value(key, name)
+
+    def test_delete_value_default(self):
+        key = r"HKEY_LOCAL_MACHINE\SYSTEM\DeleteMe"
+        name = ""
+        self.model.delete_value(key, name)
+        with self.assertRaises(common.RgEdtException):
+            self.model.get_registry_key_value(key, name)
+
+
 
 
 # From root folder:

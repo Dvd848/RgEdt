@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Event, ttk
 from pathlib import Path
 
 from . import view as v
@@ -18,6 +18,7 @@ class Application(tk.Tk):
             v.Events.EDIT_VALUE:   self.cb_edit_value,
             v.Events.ADD_KEY:      self.cb_add_key,
             v.Events.ADD_VALUE:    self.cb_add_value,
+            v.Events.DELETE_VALUE: self.cb_delete_value,
         }
 
         self.view = v.View(self, callbacks)
@@ -64,3 +65,7 @@ class Application(tk.Tk):
             # Value does not exist
             self.cb_edit_value(path, data_name, data_type, new_value)
             return True
+
+    def cb_delete_value(self, path: str, data_name: str) -> None:
+        self.model.delete_value(path, data_name)
+        self._display_current_key_values(path)

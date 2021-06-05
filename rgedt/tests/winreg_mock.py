@@ -307,6 +307,25 @@ def QueryValueEx(key: PyHKEY, value_name: str):
     except Exception as e:
         raise OSError("General Error") from e
 
+def DeleteValue(key: PyHKEY, value_name: str):
+    if __registry is None:
+        raise RuntimeError("Please initialize the registry first via InitRegistry()")
+
+    if not key.is_allowed(KEY_WRITE):
+        raise PermissionError("Access is denied")
+
+    try:
+        value_elem = key.element.find(f"./value[@name='{value_name}']")
+        if value_elem is None:
+            raise FileNotFoundError(f"Can't find {value_name} in {key}")
+
+        key.element.remove(value_elem)
+
+    except OSError as e:
+        raise e
+    except Exception as e:
+        raise OSError("General Error") from e
+
 ## ------------------------------------ Tests ------------------------------------ ##
 
 if __name__ == "__main__":
@@ -344,6 +363,9 @@ if __name__ == "__main__":
                                 <value name='type_multi_str' data='test1\\ntest2\\ntest3' type='REG_MULTI_SZ' />
                                 <value name='type_exp_str' data='%SystemDrive%\\test' type='REG_EXPAND_SZ' />
                             </key>
+                        </key>
+                        <key name="DeleteValue">
+                            <value name="delete_me" data="1" type="REG_DWORD" />
                         </key>
                     </key>
                 </registry>
@@ -493,5 +515,12 @@ if __name__ == "__main__":
                     with self.assertRaises(PermissionError):
                         CreateKey(sub_handle, self.random_str())
                 
+        def test_delete_value(self):
+            with ConnectRegistry(None, HKEY_LOCAL_MACHINE) as root_key_handle:
+                with OpenKey(root_key_handle, r"DeleteValue", access = KEY_ALL_ACCESS) as sub_handle:
+                    DeleteValue(sub_handle, "delete_me")
+                    with self.assertRaises(FileNotFoundError):
+                        QueryValueEx(sub_handle, "delete_me")
+
 
     unittest.main()
