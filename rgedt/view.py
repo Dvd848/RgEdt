@@ -57,8 +57,11 @@ class View(tk.Frame):
         self.reset()
 
     def reset(self) -> None:
-        self.details_view.reset()
+        self.reset_details()
         self.keys_view.reset()
+
+    def reset_details(self) -> None:
+        self.details_view.reset()
 
     def refresh(self, event) -> None:
         try:
