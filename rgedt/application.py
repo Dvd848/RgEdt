@@ -1,3 +1,4 @@
+from rgedt.common import RgEdtException
 import tkinter as tk
 from tkinter import Event, ttk
 from pathlib import Path
@@ -49,11 +50,7 @@ class Application(tk.Tk):
         self._display_current_key_values(path)
 
     def cb_add_key(self, path: str, name: str) -> bool:
-        try:
-            self.model.add_key(path, name)
-            return True
-        except Exception:
-            return False
+        self.model.add_key(path, name)
 
     def cb_add_value(self, path: str, data_name: str, data_type: str, new_value) -> None:
         try:
@@ -67,5 +64,8 @@ class Application(tk.Tk):
             return True
 
     def cb_delete_value(self, path: str, data_name: str) -> None:
+        if data_name == "":
+            raise RgEdtException("Can't delete the default value!")
+
         self.model.delete_value(path, data_name)
         self._display_current_key_values(path)

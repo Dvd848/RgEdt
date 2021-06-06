@@ -159,6 +159,9 @@ def CreateKey(key: PyHKEY, sub_key: str) -> PyHKEY:
     if not key.is_allowed(KEY_CREATE_SUB_KEY):
         raise PermissionError("Access is denied")
 
+    if "\\" in sub_key:
+        raise ValueError("Forbidden characters in key name")
+
     handle = None
     subkey_names = sub_key.split(_SEPARATOR)
     missing_subkey_names = []

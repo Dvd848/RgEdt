@@ -67,6 +67,10 @@ class View(tk.Frame):
     def set_current_key_values(self, current_values) -> None:
         self.details_view.show_values(current_values)
 
+    @staticmethod
+    def display_error(msg):
+        messagebox.showerror("Error", msg)
+
 class RegistryAddressBar():
     def __init__(self, parent):
         self.parent = parent
@@ -172,10 +176,11 @@ class RegistryKeysView():
         key_name =  simpledialog.askstring("Key Name", "Please enter key name",
                                 parent=self.parent)
         if key_name:
-            if self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name):
+            try:
+                self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name)
                 self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, tags = (EXPLICIT_TAG, ))
-            else:
-                messagebox.showerror("Error", "Could not add key")
+            except Exception as e:
+                View.display_error(f"Could not add key\n({str(e)})")
 
 
 
@@ -268,8 +273,10 @@ class RegistryDetailsView():
             tree_item_values = self.DetailsItemValues(*tree_item["values"])
             name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
 
-            self.callbacks[Events.DELETE_VALUE](self.keys_view.selected_item.path, name)
-            
+            try:
+                self.callbacks[Events.DELETE_VALUE](self.keys_view.selected_item.path, name)
+            except Exception as e:
+                View.display_error(f"Could not delete value\n({str(e)})")         
 
 
     def show_values(self, values: List[RegistryValue]) -> None:
@@ -312,7 +319,7 @@ class RegistryDetailsView():
                                                         value_name,
                                                         data_type,
                                                         ''):
-                        messagebox.showerror("Error", "Could not add value")
+                        View.display_error(f"Could not add value\n(a value with the same name already exists)")
             except KeyError:
                 raise RuntimeError(f"Unknown item {item}")
 
