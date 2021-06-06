@@ -183,10 +183,37 @@ class RegistryKeysView():
                 View.display_error(f"Could not add key\n({str(e)})")
 
 
-
-class RegistryDetailsView():
+class RegistryValueItem():
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
 
+    def __init__(self, tree: ttk.Treeview, id: str):
+        self._id = id
+        self._tree = tree
+        self._item = self._tree.item(self._id)
+        self._item_values = self.DetailsItemValues(*self._item["values"])
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def name(self) -> str:
+        return '' if EMPTY_NAME_TAG in self._item["tags"] else self._item_values.name
+
+    @property
+    def display_name(self) -> str:
+        return self._item_values.name
+
+    @property
+    def data(self) -> Any:
+        return '' if EMPTY_VALUE_TAG in self._item["tags"] else self._item_values.data
+
+    @property
+    def data_type(self) -> str:
+        return self._item_values.data_type
+
+class RegistryDetailsView():
+    
     _menu_item_to_winreg_data_type_str = {
         RegistryDetailsFreespaceMenu.Items.DWORD: "REG_DWORD",
         RegistryDetailsFreespaceMenu.Items.STRING: "REG_SZ",
@@ -239,28 +266,24 @@ class RegistryDetailsView():
             tags.append(EMPTY_VALUE_TAG)
             data = '(value not set)'
 
-        self.details.insert('', 'end', values = self.DetailsItemValues(name, data_type, data), tags = tuple(tags))
+        self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(name, data_type, data), tags = tuple(tags))
 
     @property
     def selected_item(self):
-        return self.details.selection()[0]
+        return RegistryValueItem(self.details, self.details.selection()[0])
 
     def _popup_edit_value_window(self, event) -> None:
         try:
-            tree_item = self.details.item(self.selected_item)
-            tree_item_values = self.DetailsItemValues(*tree_item["values"])
+            selected_item = self.selected_item
 
-            edit_value_class = EditValueView.from_type(tree_item_values.data_type)
-
-            name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
-            data = '' if EMPTY_VALUE_TAG in tree_item["tags"] else tree_item_values.data
+            edit_value_class = EditValueView.from_type(selected_item.data_type)
 
             edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_item.path, 
-                                                                                      name,
-                                                                                      tree_item_values.data_type,
+                                                                                      selected_item.name,
+                                                                                      selected_item.data_type,
                                                                                       new_value)
 
-            edit_value_window = edit_value_class(self.parent, tree_item_values.name, data, edit_value_callback)
+            edit_value_window = edit_value_class(self.parent, selected_item.display_name, selected_item.data, edit_value_callback)
 
         except IndexError:
             pass
@@ -268,13 +291,8 @@ class RegistryDetailsView():
     def _delete_value(self, event) -> None:
         delete_value = messagebox.askyesno("Delete Value", "Are you sure you want to delete this value?")
         if delete_value:
-            # TODO: Duplication with _popup_edit_value_window
-            tree_item = self.details.item(self.selected_item)
-            tree_item_values = self.DetailsItemValues(*tree_item["values"])
-            name = '' if EMPTY_NAME_TAG in tree_item["tags"] else tree_item_values.name
-
             try:
-                self.callbacks[Events.DELETE_VALUE](self.keys_view.selected_item.path, name)
+                self.callbacks[Events.DELETE_VALUE](self.keys_view.selected_item.path, self.selected_item.name)
             except Exception as e:
                 View.display_error(f"Could not delete value\n({str(e)})")         
 
