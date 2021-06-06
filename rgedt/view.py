@@ -80,8 +80,6 @@ class RegistryAddressBar():
 
         self.address_bar.config(state="readonly")
 
-        self.set_address("test")
-
     def set_address(self, address) -> None:
         self.address_bar.config(state="normal")
         self.address_bar.delete(0, tk.END)
