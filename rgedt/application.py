@@ -20,6 +20,7 @@ class Application(tk.Tk):
             v.Events.ADD_KEY:      self.cb_add_key,
             v.Events.ADD_VALUE:    self.cb_add_value,
             v.Events.DELETE_VALUE: self.cb_delete_value,
+            v.Events.REFRESH:      self.cb_refresh,
         }
 
         self.view = v.View(self, callbacks)
@@ -68,4 +69,7 @@ class Application(tk.Tk):
             raise RgEdtException("Can't delete the default value!")
 
         self.model.delete_value(path, data_name)
+        self._display_current_key_values(path)
+
+    def cb_refresh(self, path):
         self._display_current_key_values(path)

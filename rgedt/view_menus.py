@@ -90,13 +90,21 @@ class RegistryDetailsItemMenu(RegistryDetailsMenu):
 
 
 class RegistryMenuBar(tk.Menu):
-    def __init__(self, parent):
+    class Events(enum.Enum):
+        REFRESH = enum.auto()
+
+    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
         super().__init__(parent)
 
+        self.callbacks = callbacks
+
         filemenu = tk.Menu(self, tearoff=0)
-        #filemenu.add_separator()
         filemenu.add_command(label="Exit", command=parent.quit)
         self.add_cascade(label="File", menu=filemenu)
+
+        viewmenu = tk.Menu(self, tearoff=0)
+        viewmenu.add_command(label="Refresh", command=lambda: self.callbacks[self.Events.REFRESH](None), accelerator="F5")
+        self.add_cascade(label="View", menu=viewmenu)
 
         helpmenu = tk.Menu(self, tearoff=0)
         helpmenu.add_command(label="About...", command=self.show_about)

@@ -18,6 +18,7 @@ class Events(enum.Enum):
     ADD_KEY      = enum.auto()
     ADD_VALUE    = enum.auto()
     DELETE_VALUE = enum.auto()
+    REFRESH      = enum.auto()
 
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
@@ -33,7 +34,9 @@ class View(tk.Frame):
         self.parent = parent
         self.callbacks = callbacks
 
-        self.menubar = RegistryMenuBar(self)
+        self.menubar = RegistryMenuBar(self, {
+            RegistryMenuBar.Events.REFRESH: self.refresh
+        })
         parent.config(menu=self.menubar)
 
         self.top_frame = tk.Frame()
@@ -49,14 +52,20 @@ class View(tk.Frame):
         self.pw.pack(fill = tk.BOTH, expand = True, side = tk.BOTTOM) 
         self.pw.configure(sashrelief = tk.RAISED)
 
+        self.parent.bind('<F5>', self.refresh)
+
         self.reset()
 
     def reset(self) -> None:
-        self.reset_details()
+        self.details_view.reset()
         self.keys_view.reset()
 
-    def reset_details(self) -> None:
-        self.details_view.reset()
+    def refresh(self, event) -> None:
+        try:
+            self.callbacks[Events.REFRESH](self.keys_view.selected_item.path)
+        except IndexError:
+            # No item selected
+            pass
 
     def set_registry_keys(self, root_key: RegistryKey) -> None:
         self.keys_view.build_registry_tree(root_key, '')
