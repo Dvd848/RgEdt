@@ -19,6 +19,7 @@ class Events(enum.Enum):
     ADD_VALUE    = enum.auto()
     DELETE_VALUE = enum.auto()
     REFRESH      = enum.auto()
+    SET_STATUS   = enum.auto()
 
 EXPLICIT_TAG = 'explicit'
 IMPLICIT_TAG = 'implicit'
@@ -43,13 +44,17 @@ class View(tk.Frame):
         self.address_bar = RegistryAddressBar(self.top_frame)
         self.top_frame.pack(side=tk.TOP, fill = tk.BOTH)
 
+        self.bottom_frame = tk.Frame()
+        self.status_bar = RegistryStatusBar(self.bottom_frame)
+        self.bottom_frame.pack(side=tk.BOTTOM, fill = tk.BOTH)
+
         self.pw = tk.PanedWindow(orient = 'horizontal') 
         self.keys_view = RegistryKeysView(self.pw, self.address_bar, self.callbacks)
         self.details_view = RegistryDetailsView(self.pw, self.keys_view, self.callbacks)
 
         self.pw.add(self.keys_view.widget, width = 400)
         self.pw.add(self.details_view.widget)
-        self.pw.pack(fill = tk.BOTH, expand = True, side = tk.BOTTOM) 
+        self.pw.pack(fill = tk.BOTH, expand = True) 
         self.pw.configure(sashrelief = tk.RAISED)
 
         self.parent.bind('<F5>', self.refresh)
@@ -73,6 +78,8 @@ class View(tk.Frame):
     def set_registry_keys(self, root_key: RegistryKey) -> None:
         if len(root_key.sub_keys) > 0:
             self.keys_view.build_registry_tree(root_key, '')
+        else:
+            self.callbacks[Events.SET_STATUS]("Key list empty, please provide key list via menu")
 
     def enable_test_mode(self) -> None:
         self.keys_view.enable_test_mode()
@@ -80,24 +87,44 @@ class View(tk.Frame):
     def set_current_key_values(self, current_values) -> None:
         self.details_view.show_values(current_values)
 
+    def set_status(self, status) -> None:
+        self.status_bar.set_status(status)
+
     @staticmethod
     def display_error(msg):
         messagebox.showerror("Error", msg)
 
-class RegistryAddressBar():
-    def __init__(self, parent):
+class RegistryReadOnlyBar():
+    def __init__(self, parent, *args, **kwargs):
         self.parent = parent
 
-        self.address_bar = tk.Entry(parent, borderwidth=4, relief=tk.FLAT)
-        self.address_bar.pack(fill = tk.BOTH)
+        self.bar = tk.Entry(parent, borderwidth = kwargs.get("borderwidth", 4), relief = kwargs.get("relief", tk.FLAT))
+        self.bar.pack(fill = tk.BOTH)
 
-        self.address_bar.config(state="readonly")
+        self.bar.config(state="readonly")
+
+    def set_text(self, text) -> None:
+        self.bar.config(state="normal")
+        self.bar.delete(0, tk.END)
+        self.bar.insert(0, text)
+        self.bar.config(state="readonly")
+
+    def reset(self) -> None:
+        self.set_text("")
+
+class RegistryAddressBar(RegistryReadOnlyBar):
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def set_address(self, address) -> None:
-        self.address_bar.config(state="normal")
-        self.address_bar.delete(0, tk.END)
-        self.address_bar.insert(0, address)
-        self.address_bar.config(state="readonly")
+        self.set_text(address)
+
+class RegistryStatusBar(RegistryReadOnlyBar):
+    def __init__(self, parent):
+        super().__init__(parent, borderwidth = 2, relief = tk.RIDGE )
+
+    def set_status(self, status) -> None:
+        self.set_text(" " + status)
 
 class RegistryKeyItem():
     def __init__(self, tree: ttk.Treeview, id: str):
