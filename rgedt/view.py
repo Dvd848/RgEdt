@@ -71,7 +71,8 @@ class View(tk.Frame):
             pass
 
     def set_registry_keys(self, root_key: RegistryKey) -> None:
-        self.keys_view.build_registry_tree(root_key, '')
+        if len(root_key.sub_keys) > 0:
+            self.keys_view.build_registry_tree(root_key, '')
 
     def enable_test_mode(self) -> None:
         self.keys_view.enable_test_mode()
@@ -132,10 +133,17 @@ class RegistryKeysView():
         self.callbacks = callbacks
         self.address_bar = address_bar
 
-        self.tree = ttk.Treeview(parent, show = 'tree', selectmode = 'browse')
-        self.tree.pack(side = tk.LEFT)
+        self.wrapper = ttk.Frame(parent)
+
+        self.tree = ttk.Treeview(self.wrapper, show = 'tree', selectmode = 'browse')
+        self.tree.pack(side = tk.LEFT, fill = tk.BOTH, expand=True)
         self.tree.bind('<<TreeviewSelect>>', self._registry_key_selected)
         self.tree.tag_configure(IMPLICIT_TAG, foreground = 'gray')
+
+        self.vsb = ttk.Scrollbar(self.wrapper, orient = tk.VERTICAL, command = self.tree.yview)
+        self.vsb.pack(side = tk.RIGHT, fill = tk.Y)
+
+        self.tree.configure(yscrollcommand = self.vsb.set)
 
         self.fix_tkinter_color_tags()
 
@@ -144,7 +152,7 @@ class RegistryKeysView():
 
     @property
     def widget(self):
-        return self.tree
+        return self.wrapper
 
     def fix_tkinter_color_tags(self) -> None:
         def fixed_map(option):
