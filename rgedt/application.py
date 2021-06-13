@@ -13,6 +13,7 @@ class Application(tk.Tk):
 
         self.configuration = config.Configuration()
 
+        # TODO: Move all tk logic to view?
         self.title("RgEdt")
         self.resizable(width = True, height = True)
         self.geometry('1280x720')
