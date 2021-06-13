@@ -1,3 +1,4 @@
+from rgedt.view.events import Events
 from rgedt.common import RgEdtException
 import tkinter as tk
 from tkinter import Event, ttk
@@ -26,6 +27,7 @@ class Application(tk.Tk):
             v.Events.DELETE_VALUE: self.cb_delete_value,
             v.Events.REFRESH:      self.cb_refresh,
             v.Events.SET_STATUS:   self.cb_set_status,
+            v.Events.SHOW_ERROR:   self.cb_show_error,
         }
 
         self.view = v.View(self, callbacks)
@@ -98,3 +100,6 @@ class Application(tk.Tk):
 
     def cb_set_status(self, status):
         self.view.set_status(status)
+
+    def cb_show_error(self, message):
+        self.view.display_error(message)
