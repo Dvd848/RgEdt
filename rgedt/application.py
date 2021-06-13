@@ -20,24 +20,29 @@ class Application(tk.Tk):
         self.geometry('1280x720')
 
         callbacks = {
-            v.Events.KEY_SELECTED: self.cb_key_selected,
-            v.Events.EDIT_VALUE:   self.cb_edit_value,
-            v.Events.ADD_KEY:      self.cb_add_key,
-            v.Events.ADD_VALUE:    self.cb_add_value,
-            v.Events.DELETE_VALUE: self.cb_delete_value,
-            v.Events.REFRESH:      self.cb_refresh,
-            v.Events.SET_STATUS:   self.cb_set_status,
-            v.Events.SHOW_ERROR:   self.cb_show_error,
+            v.Events.KEY_SELECTED:        self.cb_key_selected,
+            v.Events.EDIT_VALUE:          self.cb_edit_value,
+            v.Events.ADD_KEY:             self.cb_add_key,
+            v.Events.ADD_VALUE:           self.cb_add_value,
+            v.Events.DELETE_VALUE:        self.cb_delete_value,
+            v.Events.REFRESH:             self.cb_refresh,
+            v.Events.SET_STATUS:          self.cb_set_status,
+            v.Events.SHOW_ERROR:          self.cb_show_error,
+            v.Events.CONFIGURE_KEY_LIST:  self.cb_configure_key_list,
+            v.Events.SET_KEY_LIST:        self.cb_set_key_list,
         }
 
         self.view = v.View(self, callbacks)
         self.model = m.Model()
 
-        registry_tree = self.model.get_registry_tree(self.configuration.key_list) #[r'HKEY_CURRENT_USER\SOFTWARE\Python']
-
-        self.view.set_registry_keys(registry_tree)
+        self.populate_view()
 
         self.test_mode = False
+
+    def populate_view(self):
+        self.view.reset()
+        registry_tree = self.model.get_registry_tree(self.configuration.key_list)
+        self.view.set_registry_keys(registry_tree)
 
     def enable_test_mode(self):
         self.test_mode = True
@@ -103,3 +108,10 @@ class Application(tk.Tk):
 
     def cb_show_error(self, message):
         self.view.display_error(message)
+
+    def cb_configure_key_list(self):
+        self.view.show_key_configuration_window(self.configuration.key_list)
+
+    def cb_set_key_list(self, new_list):
+        self.configuration.key_list = new_list
+        self.populate_view()

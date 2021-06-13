@@ -19,7 +19,8 @@ class View(tk.Frame):
         self.callbacks = callbacks
 
         self.menubar = RegistryMenuBar(self, {
-            RegistryMenuBar.Events.REFRESH: self.refresh
+            RegistryMenuBar.Events.REFRESH:                 self.refresh,
+            RegistryMenuBar.Events.CONFIGURE_KEY_LIST:      lambda event: self.callbacks[Events.CONFIGURE_KEY_LIST](),
         })
         parent.config(menu=self.menubar)
 
@@ -41,6 +42,7 @@ class View(tk.Frame):
         self.pw.configure(sashrelief = tk.RAISED)
 
         self.parent.bind('<F5>', self.refresh)
+        self.parent.bind('<F6>', lambda event: self.callbacks[Events.CONFIGURE_KEY_LIST]())
 
         self.reset()
 
@@ -73,10 +75,68 @@ class View(tk.Frame):
     def set_status(self, status) -> None:
         self.status_bar.set_status(status)
 
+    def show_key_configuration_window(self, current_key_list) -> None:
+        ConfigureKeyListView(self.parent, current_key_list, self.callbacks[Events.SET_KEY_LIST])
+
     @staticmethod
     def display_error(msg):
         messagebox.showerror("Error", msg)
 
+# TODO: Move?
+class ConfigureKeyListView():
 
+    def __init__(self, parent, current_key_list: List[str], set_list_callback: Callable[[List], None]):
+        self.parent = parent
+        self.current_key_list = current_key_list
+        self.set_list_callback = set_list_callback
 
+        self.window = tk.Toplevel(self.parent)
+        self.window.title("Configure Key List") 
+        self.window.resizable(True, True)
+        self.window.grab_set()
+
+        heading = tk.Label(self.window, text="Configure Key List", font=("Helvetica", 15))
+        heading.pack(side = tk.TOP, anchor = tk.NW, padx = 3, pady = 7)
+
+        explanation = tk.Label(self.window, text="Enter a list of registry keys to be displayed, one per line.")
+        explanation.pack(side = tk.TOP, anchor = tk.NW, padx = 3, pady = 3)
+
+        self.key_list_box = tk.Text(self.window)
+        self.key_list_box.pack(expand=True, fill=tk.BOTH, padx = 10, pady = 10)
+        self.key_list_box.delete(1.0, tk.END)
+        self.key_list_box.insert(1.0, self.format_key_list(current_key_list))
+
+        bottom_frame = tk.Frame(self.window)
+
+        # Create a button
+        cancel_button = tk.Button(bottom_frame, text="Cancel", command=self.cancel)
+        cancel_button.pack(side=tk.RIGHT, padx = 5)
+
+        # Create a button
+        ok_button = tk.Button(bottom_frame, text="OK", command = self.submit)
+        ok_button.pack(side=tk.RIGHT, padx= 5)
+
+        bottom_frame.pack(side = tk.BOTTOM, fill = tk.BOTH, padx = 3, pady = 7)
+
+        #self.window.bind('<Return>', self.submit)
+        self.window.bind('<Escape>', self.cancel)
+
+        self.window.update()
+        self.window.minsize(self.window.winfo_width(), self.window.winfo_height())
+
+    def submit(self, event = None) -> None:
+        new_key_list = self.key_list_box.get("1.0", tk.END)
+        self.set_list_callback(self.unformat_key_list(new_key_list))
+        self.window.destroy()
+
+    def cancel(self, event = None) -> None:
+        self.window.destroy()
+
+    @staticmethod
+    def format_key_list(key_list: List[str]) -> str:
+        return "\n".join(key_list)
+
+    @staticmethod
+    def unformat_key_list(key_list: str) -> List[str]:
+        return key_list.splitlines()
 

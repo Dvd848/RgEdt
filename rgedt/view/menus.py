@@ -91,7 +91,8 @@ class RegistryDetailsItemMenu(RegistryDetailsMenu):
 
 class RegistryMenuBar(tk.Menu):
     class Events(enum.Enum):
-        REFRESH = enum.auto()
+        REFRESH                 = enum.auto()
+        CONFIGURE_KEY_LIST      = enum.auto()
 
     def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]]):
         super().__init__(parent)
@@ -99,6 +100,8 @@ class RegistryMenuBar(tk.Menu):
         self.callbacks = callbacks
 
         filemenu = tk.Menu(self, tearoff=0)
+        filemenu.add_command(label="Key List...", command=lambda: self.callbacks[self.Events.CONFIGURE_KEY_LIST](None), accelerator="F6")
+        filemenu.add_separator()
         filemenu.add_command(label="Exit", command=parent.quit)
         self.add_cascade(label="File", menu=filemenu)
 
