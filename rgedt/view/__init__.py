@@ -5,12 +5,12 @@ from collections import namedtuple
 import enum
 from typing import Dict, Callable
 
-from .view_menus import *
-from .view_edit_windows import *
+from .menus import *
+from .edit_windows import *
 
-from . import registry
+from .. import registry
 
-from .common import *
+from ..common import *
 
 class Events(enum.Enum):
     KEY_SELECTED = enum.auto()
