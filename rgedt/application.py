@@ -1,23 +1,13 @@
-from rgedt.view.events import Events
 from rgedt.common import RgEdtException
-import tkinter as tk
-from tkinter import Event, ttk
-from pathlib import Path
 
 from . import config
 from . import view as v
 from . import model as m
 
-class Application(tk.Tk):
+class Application():
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
         self.configuration = config.Configuration()
-
-        # TODO: Move all tk logic to view?
-        self.title("RgEdt")
-        self.resizable(width = True, height = True)
-        self.geometry('1280x720')
 
         callbacks = {
             v.Events.KEY_SELECTED:        self.cb_key_selected,
@@ -32,12 +22,15 @@ class Application(tk.Tk):
             v.Events.SET_KEY_LIST:        self.cb_set_key_list,
         }
 
-        self.view = v.View(self, callbacks)
+        self.view = v.View(title = "RgEdt", callbacks = callbacks)
         self.model = m.Model(ignore_missing_keys = True)
 
         self.populate_view()
 
         self.test_mode = False
+
+    def run(self):
+        self.view.mainloop()
 
     def populate_view(self):
         self.view.reset()

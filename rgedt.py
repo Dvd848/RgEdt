@@ -19,4 +19,4 @@ if __name__ == "__main__":
     if args.mock_registry:
         app.enable_test_mode()
 
-    app.mainloop()
+    app.run()

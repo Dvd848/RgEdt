@@ -11,18 +11,22 @@ from .events import *
 
 from ..common import *
 
-class View(tk.Frame):
-    def __init__(self, parent, callbacks: Dict[Events, Callable[..., None]], *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+class View(tk.Tk):
+    def __init__(self, title, callbacks: Dict[Events, Callable[..., None]], *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        self.parent = parent
+        self.root = self
         self.callbacks = callbacks
 
-        self.menubar = RegistryMenuBar(self, {
+        self.title(title)
+        self.resizable(width = True, height = True)
+        self.geometry('1280x720')
+
+        self.menubar = RegistryMenuBar(self.root, {
             RegistryMenuBar.Events.REFRESH:                 self.refresh,
             RegistryMenuBar.Events.CONFIGURE_KEY_LIST:      lambda event: self.callbacks[Events.CONFIGURE_KEY_LIST](),
         })
-        parent.config(menu=self.menubar)
+        self.root.config(menu = self.menubar)
 
         self.top_frame = tk.Frame()
         self.address_bar = RegistryAddressBar(self.top_frame)
@@ -41,8 +45,8 @@ class View(tk.Frame):
         self.pw.pack(fill = tk.BOTH, expand = True) 
         self.pw.configure(sashrelief = tk.RAISED)
 
-        self.parent.bind('<F5>', self.refresh)
-        self.parent.bind('<F6>', lambda event: self.callbacks[Events.CONFIGURE_KEY_LIST]())
+        self.root.bind('<F5>', self.refresh)
+        self.root.bind('<F6>', lambda event: self.callbacks[Events.CONFIGURE_KEY_LIST]())
 
         self.reset()
 
@@ -76,7 +80,7 @@ class View(tk.Frame):
         self.status_bar.set_status(status)
 
     def show_key_configuration_window(self, current_key_list) -> None:
-        ConfigureKeyListView(self.parent, current_key_list, self.callbacks[Events.SET_KEY_LIST])
+        ConfigureKeyListView(self.root, current_key_list, self.callbacks[Events.SET_KEY_LIST])
 
     @staticmethod
     def display_error(msg):
