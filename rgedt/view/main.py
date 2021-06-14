@@ -1,6 +1,7 @@
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox
 from typing import Dict, Callable
+from pathlib import Path
 
 from .menus import *
 from .bars import *
@@ -21,6 +22,7 @@ class View(tk.Tk):
         self.title(title)
         self.resizable(width = True, height = True)
         self.geometry('1280x720')
+        self.iconbitmap(default = Path(__file__).resolve().parent / "assets" / "rgedt.ico")
 
         self.menubar = RegistryMenuBar(self.root, {
             RegistryMenuBar.Events.REFRESH:                 self.refresh,
