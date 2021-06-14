@@ -33,7 +33,7 @@ class Application(tk.Tk):
         }
 
         self.view = v.View(self, callbacks)
-        self.model = m.Model()
+        self.model = m.Model(ignore_missing_keys = True)
 
         self.populate_view()
 

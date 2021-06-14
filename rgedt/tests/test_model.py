@@ -17,17 +17,17 @@ def _traverse_keys(root: common.RegistryKey):
         yield subkey
         yield from _traverse_keys(subkey)
 
+def xml_to_key(xml):
+    element = ET.fromstring(xml)
+    return model.RegistryKey.from_xml(element) 
+
+
 class TestModel(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):        
         cls.model = model.Model()
-
-    @staticmethod
-    def xml_to_key(xml):
-        element = ET.fromstring(xml)
-        return model.RegistryKey.from_xml(element) 
-
+    
     def test_same_keys_equal(self):
         path = r"HKEY_CURRENT_USER\SOFTWARE\Python"
         tree1 = self.model.get_registry_tree([path])
@@ -59,7 +59,7 @@ class TestModel(unittest.TestCase):
                 </key>
             </key>
         """
-        self.assertEqual(self.xml_to_key(expected_xml), tree)
+        self.assertEqual(xml_to_key(expected_xml), tree)
 
     def test_inequality_with_other_xml(self):
         tree = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386"])
@@ -76,7 +76,7 @@ class TestModel(unittest.TestCase):
                 </key>
             </key>
         """
-        self.assertNotEqual(self.xml_to_key(expected_xml), tree)
+        self.assertNotEqual(xml_to_key(expected_xml), tree)
 
     def path_len_test(self, path):
         tree = self.model.get_registry_tree([path])
@@ -91,7 +91,7 @@ class TestModel(unittest.TestCase):
                 </key>
             </key>
         """
-        self.assertEqual(self.xml_to_key(expected_xml), tree)
+        self.assertEqual(xml_to_key(expected_xml), tree)
 
     def test_path_of_one(self):
         self.path_len_test(r"HKEY_CURRENT_CONFIG")
@@ -129,7 +129,7 @@ class TestModel(unittest.TestCase):
                 </key>
             </key>
         """
-        self.assertEqual(self.xml_to_key(expected_xml), tree)
+        self.assertEqual(xml_to_key(expected_xml), tree)
         
     def test_two_converging_paths (self):
         tree = self.model.get_registry_tree([r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.486\PersistentHandler"])
@@ -149,7 +149,7 @@ class TestModel(unittest.TestCase):
                 </key>
             </key>
         """
-        self.assertEqual(self.xml_to_key(expected_xml), tree)
+        self.assertEqual(xml_to_key(expected_xml), tree)
 
     def test_path_containing_other_path (self):
         expected_xml = """
@@ -170,7 +170,7 @@ class TestModel(unittest.TestCase):
             [r"HKEY_CLASSES_ROOT\.386", r"HKEY_CLASSES_ROOT\.386\PersistentHandler"]
         ]:
             tree = self.model.get_registry_tree(path)
-            self.assertEqual(self.xml_to_key(expected_xml), tree)
+            self.assertEqual(xml_to_key(expected_xml), tree)
 
     def test_remove_contained_paths(self):
         paths = [r"HKEY_CLASSES_ROOT\.386\PersistentHandler", r"HKEY_CLASSES_ROOT\.386",
@@ -217,7 +217,7 @@ class TestModel(unittest.TestCase):
                 <value name='' data='txtfile' type='REG_SZ' />
             </key>
         """
-        self.assertEqual(values, list(self.xml_to_key(expected).values))
+        self.assertEqual(values, list(xml_to_key(expected).values))
 
     def test_get_values_nonexistant_key(self):
         with self.assertRaises(common.RgEdtException):
@@ -271,8 +271,17 @@ class TestModel(unittest.TestCase):
         with self.assertRaises(common.RgEdtException):
             self.model.get_registry_key_value(key, name)
 
+class TestModelIgnoreMissing(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):        
+        cls.model = model.Model(ignore_missing_keys = True)
 
+    def test_nonexistant_path(self):
+        path = r"HKEY_CURRENT_USER\SOFTWARE\Python"
+        tree1 = self.model.get_registry_tree([path])
+        tree2 = self.model.get_registry_tree([path, r"HKEY_CURRENT_USER\SOFTWARE\Cython"])
+        self.assertEqual(tree1, tree2)
 
 # From root folder:
 #   python -m unittest rgedt.tests.test_model

@@ -25,7 +25,7 @@ class Model(object):
     _ROOT_KEY_SHORT_REGEX =  re.compile("^(" + r")|^(".join(_ROOT_KEY_SHORT.keys()) + ")")
 
     def __init__(self, **config):
-        #self.ignore_empty_keys  = config.get("ignore_empty_keys", True) # TODO Use
+        self.ignore_missing_keys = config.get("ignore_missing_keys", False)
         self.computer_name      = config.get("computer_name", None)
 
     def get_registry_tree(self, key_paths: List[str]) -> RegistryKey:
@@ -41,7 +41,7 @@ class Model(object):
 
         return computer
 
-    def _build_key_structure(self, computer: RegistryKey, key_path: str) -> RegistryKey:
+    def _build_key_structure(self, computer: RegistryKey, key_path: str) -> None:
         keys_in_path = key_path.split(REGISTRY_PATH_SEPARATOR)
 
         # First key in path:
@@ -49,34 +49,44 @@ class Model(object):
         if root_key_str in self._ROOT_KEY_SHORT.keys():
             root_key_str = self._ROOT_KEY_SHORT[root_key_str]
 
-        root_key = computer.get_sub_key(root_key_str, create_if_missing = True)
         root_key_const = self._root_key_name_to_value(root_key_str)
 
-        if len(keys_in_path) > 0: # Path consists of more than just root key
+        with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
 
-            # Last key in path:
-            leaf_key_str = keys_in_path.pop() if len(keys_in_path) > 0 else ""
+            # Start by checking if the key exists. If it doesn't handle according to policy
+            try:
+                with registry.winreg.OpenKey(root_key_handle, REGISTRY_PATH_SEPARATOR.join(keys_in_path)) as sub_key_handle:
+                    pass
+            except OSError:
+                if self.ignore_missing_keys:
+                    return
+                else:
+                    raise
+        
+            root_key = computer.get_sub_key(root_key_str, create_if_missing = True)
 
-            # Anything in the middle (if exists)
-            middle_path = REGISTRY_PATH_SEPARATOR.join(keys_in_path)
-            
-            current_key = root_key
-            for middle_key_str in keys_in_path:
-                middle_key = current_key.get_sub_key(middle_key_str, create_if_missing = True)
-                current_key = middle_key
+            if len(keys_in_path) > 0: # Path consists of more than just root key
 
-            # current_key now represents the key before the last one
+                # Last key in path:
+                leaf_key_str = keys_in_path.pop() if len(keys_in_path) > 0 else ""
 
-            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                # Anything in the middle (if exists)
+                middle_path = REGISTRY_PATH_SEPARATOR.join(keys_in_path)
+                
+                current_key = root_key
+                for middle_key_str in keys_in_path:
+                    middle_key = current_key.get_sub_key(middle_key_str, create_if_missing = True)
+                    current_key = middle_key
+
+                # current_key now represents the key before the last one
+
                 with registry.winreg.OpenKey(root_key_handle, middle_path) as sub_key_handle:
                     leaf_key = current_key.get_sub_key(leaf_key_str, create_if_missing = True)
                     self._build_subkey_structure(sub_key_handle, leaf_key)
-                    
-        else: # Corner case: Path consists of just one key (root key)
-            with registry.winreg.ConnectRegistry(self.computer_name, root_key_const) as root_key_handle:
+                        
+            else: # Corner case: Path consists of just one key (root key)
                 self._build_subkey_structure(root_key_handle, root_key, "")
-        
-        return root_key
+
 
     def _build_subkey_structure(self, base_key_handle, current_key: RegistryKey, current_key_name: Optional[str] = None) -> None:
         if current_key_name is None:
