@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, scrolledtext
 from typing import Dict, Callable
 
 from .menus import *
@@ -101,8 +101,21 @@ class ConfigureKeyListView():
         explanation = tk.Label(self.window, text="Enter a list of registry keys to be displayed, one per line.")
         explanation.pack(side = tk.TOP, anchor = tk.NW, padx = 3, pady = 3)
 
-        self.key_list_box = tk.Text(self.window)
-        self.key_list_box.pack(expand=True, fill=tk.BOTH, padx = 10, pady = 10)
+        textContainer = tk.Frame(self.window, borderwidth = 1, relief = "sunken")
+        self.key_list_box = tk.Text(textContainer, width = 60, height = 13, wrap=tk.NONE, borderwidth = 0)
+        textVsb = tk.Scrollbar(textContainer, orient = tk.VERTICAL, command = self.key_list_box.yview)
+        textHsb = tk.Scrollbar(textContainer, orient = tk.HORIZONTAL, command = self.key_list_box.xview)
+        self.key_list_box.configure(yscrollcommand = textVsb.set, xscrollcommand = textHsb.set)
+
+        self.key_list_box.grid(row = 0, column = 0, sticky = tk.NSEW)
+        textVsb.grid(row = 0, column = 1, sticky = tk.NS)
+        textHsb.grid(row = 1, column = 0, sticky = tk.EW)
+
+        textContainer.grid_rowconfigure(0, weight = 1)
+        textContainer.grid_columnconfigure(0, weight = 1)
+
+        textContainer.pack(side="top", fill="both", expand=True, padx = 10, pady = 10)
+
         self.key_list_box.delete(1.0, tk.END)
         self.key_list_box.insert(1.0, self.format_key_list(current_key_list))
 
