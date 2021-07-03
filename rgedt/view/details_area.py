@@ -1,8 +1,41 @@
+"""The 'View' Module of the application: The Details window.
+
+This file contains the implementation for the details area:
+
++------+--------------+
+| Key  | Details      |
+| Area | Area         |
+|      |              |
++------+--------------+
+
+The details area displays the values of the selected key.
+
+License:
+    MIT License
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+"""
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 from tkinter import ttk
 from collections import namedtuple
-from typing import Dict, Callable, Any
+from typing import Dict, Callable, Any, List
 
 from .menus import *
 from .keys_area import *
@@ -15,9 +48,20 @@ EMPTY_NAME_TAG = 'empty_name'
 EMPTY_VALUE_TAG = 'empty_value'
 
 class RegistryValueItem():
+    """Wrapper for registry value GUI item."""
+    
     DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
 
     def __init__(self, tree: ttk.Treeview, id: str):
+        """Instantiate a registry value.
+        
+        Args:
+            tree:
+                Parent Treeview for this registry value.
+            id: 
+                Treeview ID for this registry value.
+        """
+            
         self._id = id
         self._tree = tree
         self._item = self._tree.item(self._id)
@@ -25,25 +69,37 @@ class RegistryValueItem():
 
     @property
     def id(self) -> str:
+        """Treeview ID for this registry value."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Actual name of this registry value.
+           For a value tagged with an empty name, will return an empty string.
+        """
         return '' if EMPTY_NAME_TAG in self._item["tags"] else self._item_values.name
 
     @property
     def display_name(self) -> str:
+        """Display name of this registry value.
+           Will return the name assigned to the registry value regardless of an 'empty name' tag.
+        """
         return self._item_values.name
 
     @property
     def data(self) -> Any:
+        """The actual value of the registry value.
+           Will return an empty string if the value is tagged as an empty value.
+        """
         return '' if EMPTY_VALUE_TAG in self._item["tags"] else self._item_values.data
 
     @property
     def data_type(self) -> str:
+        """The type of the registry value as a string, e.g. 'REG_SZ'."""
         return self._item_values.data_type
 
 class RegistryDetailsView():
+    """Implements the view for the details area."""
     
     _menu_item_to_winreg_data_type_str = {
         RegistryDetailsFreespaceMenu.Items.DWORD: "REG_DWORD",
@@ -51,6 +107,19 @@ class RegistryDetailsView():
     }
 
     def __init__(self, parent, keys_view: RegistryKeysView, callbacks: Dict[Events, Callable[..., None]]):
+        """Instantiate the class.
+        
+        Args:
+            parent: 
+                Parent tk class.
+            
+            keys_view:
+                Instance of RegistryKeysView
+                
+            callbacks:
+                Dictionary of callbacks to call when an event from Events occurs
+                
+        """
         self.parent = parent
         self.keys_view = keys_view
         self.callbacks = callbacks
@@ -70,23 +139,41 @@ class RegistryDetailsView():
 
         self.details.pack(side = tk.RIGHT)
 
+        # Right click menu for any free space
         self.freespace_menu = RegistryDetailsFreespaceMenu(self.parent, {
             RegistryDetailsFreespaceMenu.Events.NEW_ITEM: self._new_item
         })
+        
+        # Right click menu for an item
         self.item_menu = RegistryDetailsItemMenu(self.parent, {
             RegistryDetailsItemMenu.Events.MODIFY_ITEM: self._popup_edit_value_window,
             RegistryDetailsItemMenu.Events.DELETE_ITEM: self._delete_value
         })
+        
         self.details.bind("<Button-3>", self._show_menu)
 
     def reset(self) -> None:
+        """Reset the details area to its initial state."""
         self.details.delete(*self.details.get_children())
 
     @property
-    def widget(self):
+    def widget(self) -> ttk.Treeview:
+        """Return the actual widget."""
         return self.details
 
-    def _add_entry(self, name: str, data, data_type: str) -> None:
+    def _add_entry(self, name: str, data: Any, data_type: str) -> None:
+        """Add an entry (registry value) to the details list.
+        
+        Args:
+            name:
+                Name of the registry value.
+                
+            data:
+                Value of the registry value.
+                
+            data_type:
+                Type of the registry value, as string (e.g. "REG_SZ")
+        """
         tags = []
         
         if name == '':
@@ -100,10 +187,12 @@ class RegistryDetailsView():
         self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(name, data_type, data), tags = tuple(tags))
 
     @property
-    def selected_item(self):
+    def selected_item(self) -> RegistryValueItem:
+        """Return the currently selected item."""
         return RegistryValueItem(self.details, self.details.selection()[0])
 
     def _popup_edit_value_window(self, event) -> None:
+        """Pop-up the "Edit Value" window."""
         try:
             selected_item = self.selected_item
 
@@ -120,6 +209,7 @@ class RegistryDetailsView():
             pass
 
     def _delete_value(self, event) -> None:
+        """Delete a value."""
         delete_value = messagebox.askyesno("Delete Value", "Are you sure you want to delete this value?")
         if delete_value:
             try:
@@ -128,6 +218,13 @@ class RegistryDetailsView():
                 self.callbacks[Events.SHOW_ERROR](f"Could not delete value\n({str(e)})")
 
     def show_values(self, values: List[RegistryValue]) -> None:
+        """Given a list of registry values, show them.
+        
+        Args:
+            value:
+                A list of registry values to show.
+                
+        """
         self.reset()
 
         if (len(values) == 0):
@@ -137,6 +234,13 @@ class RegistryDetailsView():
             self._add_entry(value.name, value.data, value.data_type.name)
 
     def _show_menu(self, event) -> None:
+        """Show the appropriate menu based on the user interaction.
+        
+        If the user clicked an item: Show the item menu.
+        If the user clicked anywhere else: Show the free-space menu.
+        
+        Menus are displayed only if the currently-selected key is explicit.
+        """
         try:
             if not self.keys_view.selected_item.is_explicit:
                 return
@@ -155,6 +259,12 @@ class RegistryDetailsView():
         
 
     def _new_item(self, item: RegistryDetailsFreespaceMenu.Items) -> None:
+        """Add a new item (key or value).
+        
+        Args:
+            item:
+                Type of item to add.
+        """
         if item == RegistryDetailsFreespaceMenu.Items.KEY:
             self.keys_view.create_new_key()
         else:

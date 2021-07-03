@@ -1,3 +1,29 @@
+"""The 'View' Module of the application.
+
+This file contains the main "View" logic.
+
+License:
+    MIT License
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+"""
+
 import tkinter as tk
 from tkinter import messagebox
 from typing import Dict, Callable
@@ -13,7 +39,19 @@ from .events import *
 from ..common import *
 
 class View(tk.Tk):
+    """ The application 'View' Model."""
+    
     def __init__(self, title, callbacks: Dict[Events, Callable[..., None]], *args, **kwargs):
+        """Instantiate the class.
+        
+        Args:
+            title: 
+                Title of the application.
+            
+            callbacks:
+                Dictionary of callbacks to call when an event from Events occurs
+                
+        """
         super().__init__(*args, **kwargs)
 
         self.root = self
@@ -53,13 +91,16 @@ class View(tk.Tk):
         self.reset()
 
     def reset(self) -> None:
+        """Reset the view to its initial state."""
         self.reset_details()
         self.keys_view.reset()
 
     def reset_details(self) -> None:
+        """Reset the details area to its initial state."""
         self.details_view.reset()
 
     def refresh(self, event) -> None:
+        """Handle a user refresh request."""
         try:
             self.callbacks[Events.REFRESH](self.keys_view.selected_item.path)
         except IndexError:
@@ -67,31 +108,76 @@ class View(tk.Tk):
             pass
 
     def set_registry_keys(self, root_key: RegistryKey) -> None:
+        """Populate the registry tree.
+        
+        Args:
+            root_key:
+                A representation of the registry tree as a RegistryKey object.
+        """
         if len(root_key.sub_keys) > 0:
             self.keys_view.build_registry_tree(root_key, '')
         else:
             self.callbacks[Events.SET_STATUS]("Key list empty, please provide key list via menu")
 
     def enable_test_mode(self) -> None:
+        """Perform any actions required if the application is running in test mode."""
         self.keys_view.enable_test_mode()
 
-    def set_current_key_values(self, current_values) -> None:
+    def set_current_key_values(self, current_values: List[RegistryValue]) -> None:
+        """Display the given values for the current key.
+        
+        Args:
+            current_values:
+                Values to display.
+        
+        """
         self.details_view.show_values(current_values)
 
-    def set_status(self, status) -> None:
+    def set_status(self, status: str) -> None:
+        """Set the given status in the status bar.
+        
+        Args:
+            status:
+                Status to set.
+        """
         self.status_bar.set_status(status)
 
-    def show_key_configuration_window(self, current_key_list) -> None:
+    def show_key_configuration_window(self, current_key_list: List[str]) -> None:
+        """Show the Key Configuration Window with the given key list.
+        
+        Args:
+            current_key_list:
+                Key list to show in the key configuration window.
+        """
         ConfigureKeyListView(self.root, current_key_list, self.callbacks[Events.SET_KEY_LIST])
 
     @staticmethod
-    def display_error(msg):
+    def display_error(msg: str) -> None:
+        """Display the given error.
+        
+        Args:
+            msg:
+                Error message to display.
+        """
         messagebox.showerror("Error", msg)
 
 # TODO: Move?
 class ConfigureKeyListView():
-
+    """Window for configuring the key list."""
+    
     def __init__(self, parent, current_key_list: List[str], set_list_callback: Callable[[List], None]):
+        """Instantiate the class.
+        
+        Args:
+            parent:
+                Parent tkinter object.
+                
+            current_key_list:
+                List of current keys configured.
+                
+            set_list_callback:
+                Callback to call if new list is configured.
+        """
         self.parent = parent
         self.current_key_list = current_key_list
         self.set_list_callback = set_list_callback
@@ -144,18 +230,22 @@ class ConfigureKeyListView():
         self.window.minsize(self.window.winfo_width(), self.window.winfo_height())
 
     def submit(self, event = None) -> None:
+        """Handle event where user wants to save the new list."""
         new_key_list = self.key_list_box.get("1.0", tk.END)
         self.set_list_callback(self.unformat_key_list(new_key_list))
         self.window.destroy()
 
     def cancel(self, event = None) -> None:
+        """Handle event where user cancels the request."""
         self.window.destroy()
 
     @staticmethod
     def format_key_list(key_list: List[str]) -> str:
+        """Translate a list of strings to the internal format that can be displayed to the user."""
         return "\n".join(key_list)
 
     @staticmethod
     def unformat_key_list(key_list: str) -> List[str]:
+        """Translate the internal format displayed to the user to a list of strings."""
         return key_list.splitlines()
 

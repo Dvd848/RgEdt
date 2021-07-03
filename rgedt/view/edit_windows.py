@@ -1,11 +1,55 @@
+"""The 'View' Module of the application: The "Edit" window.
+
+This file contains the implementation for the different "edit value"
+windows, based on the type of the value being edited.
+
+License:
+    MIT License
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+"""
+
 import tkinter as tk
 
 from typing import Callable, Type, Any
 import string
 
 class EditValueView():
-
-    def __init__(self, parent, name: str, data, edit_value_callback: Callable[[str, Any], None]):
+    """Generic parent class for an "Edit Window" class."""
+    
+    def __init__(self, parent, name: str, data: Any, edit_value_callback: Callable[[str, Any], None]):
+        """Instantiate the class.
+        
+        Args:
+            parent:
+                Parent tk class.
+                
+            name:
+                Name of the value to be edited.
+                
+            data:
+                Value of the registry value being edited.
+                
+            edit_value_callback:
+                Callback to be called once the user edits the value, 
+                in order to apply the new value
+        """
         self.parent = parent
         self.name = name
         self.data = data
@@ -23,19 +67,31 @@ class EditValueView():
         self.window.bind('<Escape>', self.cancel)
     
     @property
-    def type_name(self):
+    def type_name(self) -> str:
+        """Name of the registry value type."""
         return "Value"
 
     @property
-    def width(self):
+    def width(self) -> int:
+        """Width of the window."""
         return 380
 
     @property
     def height(self):
+        """Height of the window."""
         return 180
 
     @classmethod
     def from_type(cls, type: str) -> Type["EditValueView"]:
+        """Factory method to create an "Edit Window" class from a given type string.
+        
+        Args:
+            type:
+                Type of registry value to instantiate class for.
+                
+        Returns:
+            The appropriate "Edit Window" class based on the given type.
+        """
         factory_var = "_FACTORY"
         if not hasattr(cls, factory_var):
             setattr(cls, factory_var, {
@@ -49,14 +105,18 @@ class EditValueView():
         except KeyError as e:
             raise ValueError(f"Can't create appropriate 'change value' view for '{type}'") from e
 
-    def submit(self, event = None):
+    def submit(self, event = None) -> None:
+        """Submit the edit via the "edit value callback"."""
         self.edit_value_callback(self.current_value)
         self.window.destroy()
 
-    def cancel(self, event = None):
+    def cancel(self, event = None) -> None:
+        """Cancel the edit."""
         self.window.destroy()
 
 class EditStringView(EditValueView):
+    """An "Edit Window" for a string type."""
+    
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -93,23 +153,28 @@ class EditStringView(EditValueView):
         ok_button.pack(side=tk.RIGHT, padx=padx)
 
     @property
-    def type_name(self):
+    def type_name(self) -> str:
+        """Name of the registry value type."""
         return "String"
 
     @property
-    def width(self):
+    def width(self) -> int:
+        """Width of the window."""
         return 380
 
     @property
-    def height(self):
+    def height(self) -> int:
+        """Height of the window."""
         return 180
 
     @property
-    def current_value(self):
+    def current_value(self) -> str:
+        """The current value of the registry value, as reflected in the input field."""
         return self.data_entry.get()
 
 
 class EditDwordView(EditValueView):
+    """An "Edit Window" for a 32-bit DWORD type."""
     BASE_HEX = 16
     BASE_DEC = 10
 
@@ -181,28 +246,52 @@ class EditDwordView(EditValueView):
 
     @property
     def type_name(self):
+        """Name of the registry value type."""
         return "DWORD (32-bit) Value"
 
     @property
     def width(self):
+        """Width of the window."""
         return 330
 
     @property
     def height(self):
+        """Height of the window."""
         return 190
 
     @property
     def current_value_raw(self) -> str:
+        """The current value of the registry value, 
+           as reflected in the input field, without any formatting.
+        """
         return self.data_entry.get()
 
     @property
     def current_value(self) -> int:
+        """The current value of the registry value, 
+           as reflected in the input field, cast to an integer.
+        """
         if self.current_value_raw == "":
             return 0
         return int(self.current_value_raw, self.base.get())
   
     @classmethod
     def data_repr(cls, value: str, base: int) -> str:
+        """Helper method to return the given value according to the given base.
+        
+        Only base 10 and base 16 are supported.
+        
+        Args:
+            value:
+                A value to be represented given the base.
+                
+            base:
+                Base to be used for the representation.
+                
+        Returns:
+            The string representation for 'value' using the given base.
+        
+        """
         if base == cls.BASE_HEX:
             return format(value, 'x')
         elif base == cls.BASE_DEC:
@@ -210,6 +299,9 @@ class EditDwordView(EditValueView):
         raise RuntimeError(f"Unknown base: {base}")
 
     def change_base(self) -> None:
+        """Change the representation of the edited value according to the 
+           currently-selected base.
+        """
         current_base = self.base.get()
         if self.prev_base != current_base:
             current_value_raw = self.current_value_raw
@@ -224,6 +316,25 @@ class EditDwordView(EditValueView):
             self.prev_base = current_base
 
     def validate_input(self, P: str) -> bool:
+        """Validate the input based on the current base.
+        
+        This method returns True if and only if the given input contains
+        a valid value given the current base.
+        
+        Legal characters:
+            (-) Base 10: [0-9]
+            (-) Base 16: [0-9a-fA-F]
+            (-) An empty string is always considered valid.
+        
+        In addition, the input must be representable as a 32-bit number.
+        
+        Args:
+            P:
+                Value representation to validate.
+                
+        Returns:
+            True if and only if the representation is valid.
+        """
         base = self.base.get()
         if P == "":
             return True
