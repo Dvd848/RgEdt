@@ -35,8 +35,10 @@ License:
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import ttk
+import tkinter
 
 from typing import Dict, Callable
+from pathlib import Path
 
 from .bars import *
 from .events import *
@@ -120,6 +122,9 @@ class RegistryKeysView():
 
         self.fix_tkinter_color_tags()
 
+        self.folder_img   = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "folder.png")
+        self.computer_img = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "computer.png")
+
     def reset(self) -> None:
         """Reset the key area to its initial state."""
         self.tree.delete(*self.tree.get_children())
@@ -159,8 +164,10 @@ class RegistryKeysView():
                 TreeView ID for parent item.
         
         """
+
         tag = EXPLICIT_TAG if key.is_explicit else IMPLICIT_TAG
-        sub_tree = self.tree.insert(tree_parent, 'end', text = key.name, open = True, tags = (tag, ))
+        sub_tree = self.tree.insert(tree_parent, 'end', text = key.name, open = True, tags = (tag, ), 
+                                    image = self.folder_img if tree_parent != '' else self.computer_img)
         for subkey in key.sub_keys:
             self.build_registry_tree(subkey, sub_tree)
 
