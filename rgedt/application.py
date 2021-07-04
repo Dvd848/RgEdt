@@ -161,25 +161,27 @@ class Application():
                 Sending an empty string will cause the value to be added
                 with its default value (e.g. 0 for REG_DWORD).
 
-        Returns:
-            False: A value with the same name already exists
-            True: The value was added successfully
         """
 
-        # TODO: Move to exception instead of return value
         # TODO: Create method to read default value instead of relying on model implementation
         self._reset_status()
+        value_exists = False
+
         try:
             self.model.get_registry_key_value(path, data_name)
 
             # If no exception - value already exists
-            self.view.set_status("Value already exists")
-            return False
+            value_exists = True
         except Exception:
             # Value does not exist - add it
-            self.cb_edit_value(path, data_name, data_type, new_value)
-            self.view.set_status("Value added successfully")
-            return True
+            pass
+            
+        if value_exists:
+            raise RgEdtException("Can't add value: Already exists")
+        
+        self.cb_edit_value(path, data_name, data_type, new_value)
+        self.view.set_status("Value added successfully")
+        
 
     def cb_delete_value(self, path: str, data_name: str) -> None:
         """Callback for an event where the user deletes a value.

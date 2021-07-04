@@ -272,13 +272,18 @@ class RegistryDetailsView():
         else:
             try:
                 data_type = self._menu_item_to_winreg_data_type_str[item]
-                value_name =  simpledialog.askstring("Value Name", "Please enter value name",
-                                    parent=self.parent)
-                if value_name:
-                    if not self.callbacks[Events.ADD_VALUE](self.keys_view.selected_item.path, 
-                                                        value_name,
-                                                        data_type,
-                                                        ''):
-                        self.callbacks[Events.SHOW_ERROR]("Could not add value\n(a value with the same name already exists)")
             except KeyError:
                 raise RuntimeError(f"Unknown item {item}")
+
+            value_name =  simpledialog.askstring("Value Name", "Please enter value name",
+                                parent=self.parent)
+            if not value_name:
+                return
+
+            try:
+                self.callbacks[Events.ADD_VALUE](self.keys_view.selected_item.path, 
+                                                value_name,
+                                                data_type,
+                                                '')
+            except Exception as e:
+                self.callbacks[Events.SHOW_ERROR](str(e))
