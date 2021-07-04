@@ -40,6 +40,12 @@ class Model(object):
         "HKU"                   : "HKEY_USERS",
         "HKCC"                  : "HKEY_CURRENT_CONFIG"
     }
+
+    # TODO: Add more:
+    _DEFAULT_VALUES = {
+        "REG_SZ": '',
+        "REG_DWORD": 0
+    }
     
     # Regular expression to check if the key path starts with a hive acronym
     _ROOT_KEY_SHORT_REGEX =  re.compile("^(" + r")|^(".join(_ROOT_KEY_SHORT.keys()) + ")")
@@ -411,3 +417,17 @@ class Model(object):
         except Exception as e:
             raise RgEdtException(f"Can't delete value '{value_name}' from key '{key}'") from e
 
+    def get_default_value(self, data_type: str) -> Any:
+        """Given a data type, return its default value.
+        
+        Args:
+            A data type, as a string (e.g. REG_SZ).
+
+        Returns:
+            The default value for the data type.
+        """
+
+        try:
+            return self._DEFAULT_VALUES[data_type]
+        except KeyError as e:
+            raise RgEdtException(f"Can't find default value for unknown type {data_type}") from e

@@ -163,8 +163,11 @@ class Application():
 
         """
 
-        # TODO: Create method to read default value instead of relying on model implementation
         self._reset_status()
+
+        if new_value == '':
+            new_value = self.model.get_default_value(data_type)
+
         value_exists = False
 
         try:
