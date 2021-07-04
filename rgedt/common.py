@@ -115,6 +115,9 @@ class RegistryValue:
     def __str__(self) -> str:
         return f"RegistryValue {{ name = '{self.name}', data = '{self.data}', type = '{self.data_type.name}' }} "
 
+    def __repr__(self) -> str:
+        return f"RegistryValue(name = '{self.name}', data = {self.data}, type = winreg.{self.data_type.name})"
+
     def to_xml(self) -> str:
         """Convert registry value to XML representation."""
         return f"<value name='{self.name}' data='{str(self.data)}' type='{self.data_type.name}' />"

@@ -219,6 +219,8 @@ class RegistryDetailsView():
 
     def show_values(self, values: List[RegistryValue]) -> None:
         """Given a list of registry values, show them.
+
+        If the default value does not already exist, adds it (same behavior as regedit).
         
         Args:
             value:
@@ -227,8 +229,8 @@ class RegistryDetailsView():
         """
         self.reset()
 
-        if (len(values) == 0):
-            values = [RegistryValue('', '', registry.winreg.REG_SZ)]
+        if not any(value.name == '' for value in values):
+            values.insert(0, RegistryValue('', '', registry.winreg.REG_SZ))
 
         for value in values:
             self._add_entry(value.name, value.data, value.data_type.name)

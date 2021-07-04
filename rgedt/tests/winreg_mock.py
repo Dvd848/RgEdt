@@ -5,6 +5,50 @@ The implementation is based on an XML representation of the registry.
 The implementation is partial and mainly includes only functionality
 needed by the application.
 
+=========
+= Notes =
+=========
+
+The Default Value:
+------------------
+The default value is the registry value that appears in the regedit GUI under
+the name "(Default)". This value has several unique aspects:
+
+    a. If the default value does not have an actual value associated to it,
+       it will not be returned by EnumValue(). 
+    b. If the default value has an actual value associated to it, the name 
+       of the default value will be returned by EnumValue() as an empty string.
+
+Assume we have created a new key called "test" under "HKEY_CURRENT_USER\SOFTWARE\RgEdt".
+
+Open the key for reading and writing:
+>>> test_key = OpenKey(HKEY_CURRENT_USER, r"SOFTWARE\RgEdt\test", 0, KEY_READ | KEY_WRITE)
+
+Verify that the default value is not returned (it does apprear in regedit):
+>>> EnumValue(test_key, 0)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+OSError: [WinError 259] No more data is available
+
+Create a new value under the same path:
+>>> SetValueEx(test_key, "new_value_name", 0, REG_SZ, "new_value")
+
+Verify that the new value is returned, but still not the default value (which still aprears in the GUI):
+>>> EnumValue(test_key, 0)
+('new_value_name', 'new_value', 1)
+>>> EnumValue(test_key, 1)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+OSError: [WinError 259] No more data is available
+
+Set a value for the default value, and observe that it is now returned:
+>>> SetValueEx(test_key, "", 0, REG_SZ, "value_for_default")
+>>> EnumValue(test_key, 0)
+('new_value_name', 'new_value', 1)
+>>> EnumValue(test_key, 1)
+('', 'value_for_default', 1)
+
+
 License:
     MIT License
 
