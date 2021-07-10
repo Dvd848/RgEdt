@@ -214,6 +214,18 @@ class RegistryDetailsView():
                             image = self.get_icon_for_type(data_type), 
                             text = name)
 
+    def _sort(self) -> None:
+        """Sort the registry values.
+        
+        Values sorted in a case insensitive, manner.
+        Default value appears first.
+        """
+        rows = [(RegistryValueItem(self.details, item, ) ) for item in self.details.get_children('')]
+        rows.sort(key = lambda reg_value_item: reg_value_item.name.lower())
+
+        for index, (reg_value_item) in enumerate(rows):
+            self.details.move(reg_value_item.id, '', index)
+
     @property
     def selected_item(self) -> RegistryValueItem:
         """Return the currently selected item."""
@@ -262,6 +274,8 @@ class RegistryDetailsView():
 
         for value in values:
             self._add_entry(value.name, value.data, value.data_type.name)
+        
+        self._sort()
 
     def _show_menu(self, event) -> None:
         """Show the appropriate menu based on the user interaction.
