@@ -50,7 +50,7 @@ EMPTY_VALUE_TAG = 'empty_value'
 class RegistryValueItem():
     """Wrapper for registry value GUI item."""
     
-    DetailsItemValues = namedtuple("DetailsItemValues", "name data_type data")
+    DetailsItemValues = namedtuple("DetailsItemValues", "data_type data")
 
     def __init__(self, tree: ttk.Treeview, id: str):
         """Instantiate a registry value.
@@ -77,14 +77,14 @@ class RegistryValueItem():
         """Actual name of this registry value.
            For a value tagged with an empty name, will return an empty string.
         """
-        return '' if EMPTY_NAME_TAG in self._item["tags"] else self._item_values.name
+        return '' if EMPTY_NAME_TAG in self._item["tags"] else self._item["text"]
 
     @property
     def display_name(self) -> str:
         """Display name of this registry value.
            Will return the name assigned to the registry value regardless of an 'empty name' tag.
         """
-        return self._item_values.name
+        return self._item["text"]
 
     @property
     def data(self) -> Any:
@@ -128,10 +128,14 @@ class RegistryDetailsView():
 
         columns = (ColumnAttr('Name', 200), ColumnAttr('Type', 100), ColumnAttr('Data', 500))
         self.details = ttk.Treeview(parent, columns = columns, 
-                                    show = 'headings', selectmode = 'browse')
+                                    #show = 'headings', 
+                                    selectmode = 'browse')
+
+
+
         for i, column in enumerate(columns):
-            self.details.heading(f"#{i+1}", text = column.name, anchor = tk.W)
-            self.details.column(f"#{i+1}", minwidth = 100, stretch = tk.NO, width = column.width, anchor = tk.W)
+            self.details.heading(f"#{i}", text = column.name, anchor = tk.W)
+            self.details.column(f"#{i}", minwidth = 100, stretch = tk.NO, width = column.width, anchor = tk.W)
 
         self.details.bind("<Double-Button-1>", self._popup_edit_value_window)
         self.details.bind("<Return>", self._popup_edit_value_window)
@@ -152,6 +156,9 @@ class RegistryDetailsView():
         
         self.details.bind("<Button-3>", self._show_menu)
 
+        self.text_icon = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "text.png")
+        self.binary_icon = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "bin.png")
+
     def reset(self) -> None:
         """Reset the details area to its initial state."""
         self.details.delete(*self.details.get_children())
@@ -160,6 +167,25 @@ class RegistryDetailsView():
     def widget(self) -> ttk.Treeview:
         """Return the actual widget."""
         return self.details
+
+    def get_icon_for_type(self, data_type: str) -> tkinter.PhotoImage:
+        """Return an icon based on the given data type.
+        
+        Args:
+            data_type:
+                Type of data, as string.
+
+        Returns:
+            The appropriate icon.
+        
+        """
+        if data_type in ["REG_SZ", "REG_EXPAND_SZ", "REG_MULTI_SZ"]:
+            return self.text_icon
+        elif data_type in ["REG_DWORD", "REG_DWORD_LITTLE_ENDIAN", "REG_BINARY", "REG_DWORD_BIG_ENDIAN", 
+                           "REG_QWORD", "REG_QWORD_LITTLE_ENDIAN"]:
+            return self.binary_icon
+        
+        raise ValueError(f"Can't find icon for {data_type}")
 
     def _add_entry(self, name: str, data: Any, data_type: str) -> None:
         """Add an entry (registry value) to the details list.
@@ -184,7 +210,9 @@ class RegistryDetailsView():
             tags.append(EMPTY_VALUE_TAG)
             data = '(value not set)'
 
-        self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(name, data_type, data), tags = tuple(tags))
+        self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(data_type, data), tags = tuple(tags),
+                            image = self.get_icon_for_type(data_type), 
+                            text = name)
 
     @property
     def selected_item(self) -> RegistryValueItem:
