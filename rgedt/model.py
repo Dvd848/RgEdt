@@ -229,6 +229,7 @@ class Model(object):
         expanded_key_paths = []
 
         for key_path in key_paths:
+            key_path = cls._normalize_key_string(key_path)
             expanded_key_paths.append(cls._ROOT_KEY_SHORT_REGEX.sub(expand_root_key, key_path).rstrip(REGISTRY_PATH_SEPARATOR))
 
         sorted_paths = list(sorted(expanded_key_paths))
