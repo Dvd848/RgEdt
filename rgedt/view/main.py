@@ -25,6 +25,8 @@ License:
 """
 
 import tkinter as tk
+import importlib.resources
+
 from tkinter import messagebox
 from typing import Dict, Callable
 from pathlib import Path
@@ -60,7 +62,10 @@ class View(tk.Tk):
         self.title(title)
         self.resizable(width = True, height = True)
         self.geometry('1280x720')
-        self.iconbitmap(default = Path(__file__).resolve().parent / "assets" / "rgedt.ico")
+
+        with importlib.resources.path(f"{__package__}.assets", "rgedt.ico") as icon_path:
+            self.iconbitmap(default = icon_path)
+        
 
         self.menubar = RegistryMenuBar(self.root, {
             RegistryMenuBar.Events.REFRESH:                 self.refresh,

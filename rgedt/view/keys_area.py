@@ -35,7 +35,7 @@ License:
 import tkinter as tk
 from tkinter import simpledialog
 from tkinter import ttk
-import tkinter
+import importlib
 
 from typing import Dict, Callable
 from pathlib import Path
@@ -122,8 +122,8 @@ class RegistryKeysView():
 
         self.fix_tkinter_color_tags()
 
-        self.folder_img   = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "folder.png")
-        self.computer_img = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "computer.png")
+        self.folder_img = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "folder.png"))
+        self.computer_img = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "computer.png"))
 
     def reset(self) -> None:
         """Reset the key area to its initial state."""

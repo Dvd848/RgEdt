@@ -35,7 +35,7 @@ License:
 import argparse
 from rgedt import registry
 
-if __name__ == "__main__":
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--mock_registry', action = 'store', type = str, 
                         help = 'Mock the registry', metavar=('REGISTRY_XML'))
@@ -57,3 +57,7 @@ if __name__ == "__main__":
         app.enable_test_mode()
 
     app.run()
+
+
+if __name__ == "__main__":
+    main()

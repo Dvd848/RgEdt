@@ -36,6 +36,7 @@ from tkinter import simpledialog, messagebox
 from tkinter import ttk
 from collections import namedtuple
 from typing import Dict, Callable, Any, List
+import importlib
 
 from .menus import *
 from .keys_area import *
@@ -156,8 +157,8 @@ class RegistryDetailsView():
         
         self.details.bind("<Button-3>", self._show_menu)
 
-        self.text_icon = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "text.png")
-        self.binary_icon = tkinter.PhotoImage(file=Path(__file__).resolve().parent / "assets" / "bin.png")
+        self.text_icon = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "text.png"))
+        self.binary_icon = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "bin.png"))
 
     def reset(self) -> None:
         """Reset the details area to its initial state."""
@@ -168,7 +169,7 @@ class RegistryDetailsView():
         """Return the actual widget."""
         return self.details
 
-    def get_icon_for_type(self, data_type: str) -> tkinter.PhotoImage:
+    def get_icon_for_type(self, data_type: str) -> tk.PhotoImage:
         """Return an icon based on the given data type.
         
         Args:
