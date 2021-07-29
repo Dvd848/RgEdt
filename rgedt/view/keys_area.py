@@ -199,6 +199,6 @@ class RegistryKeysView():
         if key_name:
             try:
                 self.callbacks[Events.ADD_KEY](self.selected_item.path, key_name)
-                self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, tags = (EXPLICIT_TAG, ))
+                self.tree.insert(self.selected_item.id, 'end', text = key_name, open = True, image = self.folder_img, tags = (EXPLICIT_TAG, ))
             except Exception as e:
                 self.callbacks[Events.SHOW_ERROR](f"Could not add key\n({str(e)})")
