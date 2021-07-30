@@ -30,8 +30,11 @@ class Events(enum.Enum):
     
     # User selects a key
     KEY_SELECTED       = enum.auto()
-    
-    # User attempts to edit a value
+
+    # User requests to edit a value
+    SHOW_EDIT_VALUE    = enum.auto()
+
+    # User edits a value in practice
     EDIT_VALUE         = enum.auto()
     
     # User adds a new key
@@ -55,5 +58,5 @@ class Events(enum.Enum):
     # User requests to reconfigure the key list
     CONFIGURE_KEY_LIST = enum.auto()
     
-    # User sets the key list to a new list
+    # User sets the key list to a new list in practice
     SET_KEY_LIST       = enum.auto()

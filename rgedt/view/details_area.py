@@ -54,7 +54,7 @@ class RegistryValueItem():
     DetailsItemValues = namedtuple("DetailsItemValues", "data_type data")
 
     def __init__(self, tree: ttk.Treeview, id: str):
-        """Instantiate a registry value.
+        """Instantiate a registry value wrapper from an existing TreeView item.
         
         Args:
             tree:
@@ -101,11 +101,7 @@ class RegistryValueItem():
 
 class RegistryDetailsView():
     """Implements the view for the details area."""
-    
-    _menu_item_to_winreg_data_type_str = {
-        RegistryDetailsFreespaceMenu.Items.DWORD: "REG_DWORD",
-        RegistryDetailsFreespaceMenu.Items.STRING: "REG_SZ",
-    }
+
 
     def __init__(self, parent, keys_view: RegistryKeysView, callbacks: Dict[Events, Callable[..., None]]):
         """Instantiate the class.
@@ -160,6 +156,27 @@ class RegistryDetailsView():
         self.text_icon = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "text.png"))
         self.binary_icon = tk.PhotoImage(data = importlib.resources.read_binary(f"{__package__}.assets", "bin.png"))
 
+
+        TypeRecord = namedtuple("TypeRecord", "new_item_enum icon display_format") 
+
+        self.data_type_attributes = {
+            "REG_SZ":                  TypeRecord(RegistryDetailsFreespaceMenu.Items.STRING, self.text_icon,   str),
+            "REG_EXPAND_SZ":           TypeRecord(None,                                      self.text_icon,   str),
+            "REG_MULTI_SZ":            TypeRecord(None,                                      self.text_icon,   lambda val: " ".join(val)),
+            "REG_DWORD":               TypeRecord(RegistryDetailsFreespaceMenu.Items.DWORD,  self.binary_icon, lambda val: f"{val:#0{10}x} ({val})"),
+            "REG_DWORD_LITTLE_ENDIAN": TypeRecord(None,                                      self.binary_icon, lambda val: f"{val:#0{10}x} ({val})"),
+            "REG_BINARY":              TypeRecord(None,                                      self.binary_icon, lambda val: val.hex(" ") if val is not None else "(zero-length binary value)"),
+            "REG_DWORD_BIG_ENDIAN":    TypeRecord(None,                                      self.binary_icon, lambda val: f"{val:#0{10}x} ({val})"),
+            "REG_QWORD":               TypeRecord(None,                                      self.binary_icon, lambda val: f"{val:#0{18}x} ({val})"),
+            "REG_QWORD_LITTLE_ENDIAN": TypeRecord(None,                                      self.binary_icon, lambda val: f"{val:#0{18}x} ({val})")
+        }
+
+        self.menu_item_to_winreg_data_type_str = { 
+            data_type_attr.new_item_enum : data_type 
+            for data_type, data_type_attr in self.data_type_attributes.items()
+            if data_type_attr.new_item_enum is not None
+        }
+
     def reset(self) -> None:
         """Reset the details area to its initial state."""
         self.details.delete(*self.details.get_children())
@@ -168,25 +185,6 @@ class RegistryDetailsView():
     def widget(self) -> ttk.Treeview:
         """Return the actual widget."""
         return self.details
-
-    def get_icon_for_type(self, data_type: str) -> tk.PhotoImage:
-        """Return an icon based on the given data type.
-        
-        Args:
-            data_type:
-                Type of data, as string.
-
-        Returns:
-            The appropriate icon.
-        
-        """
-        if data_type in ["REG_SZ", "REG_EXPAND_SZ", "REG_MULTI_SZ"]:
-            return self.text_icon
-        elif data_type in ["REG_DWORD", "REG_DWORD_LITTLE_ENDIAN", "REG_BINARY", "REG_DWORD_BIG_ENDIAN", 
-                           "REG_QWORD", "REG_QWORD_LITTLE_ENDIAN"]:
-            return self.binary_icon
-        
-        raise ValueError(f"Can't find icon for {data_type}")
 
     def _add_entry(self, name: str, data: Any, data_type: str) -> None:
         """Add an entry (registry value) to the details list.
@@ -207,12 +205,14 @@ class RegistryDetailsView():
             tags.append(EMPTY_NAME_TAG)
             name = '(Default)'
 
-        if data == '':
-            tags.append(EMPTY_VALUE_TAG)
-            data = '(value not set)'
+            if data == '':
+                tags.append(EMPTY_VALUE_TAG)
+                data = '(value not set)'
+        
+        display_data = self.data_type_attributes[data_type].display_format(data)
 
-        self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(data_type, data), tags = tuple(tags),
-                            image = self.get_icon_for_type(data_type), 
+        self.details.insert('', 'end', values = RegistryValueItem.DetailsItemValues(data_type, display_data), tags = tuple(tags),
+                            image = self.data_type_attributes[data_type].icon, 
                             text = name)
 
     def _sort(self) -> None:
@@ -237,14 +237,25 @@ class RegistryDetailsView():
         try:
             selected_item = self.selected_item
 
+            # TODO: Too complicated...
+
             edit_value_class = EditValueView.from_type(selected_item.data_type)
 
+            # This callback is called when the user actually edits the value
             edit_value_callback = lambda new_value: self.callbacks[Events.EDIT_VALUE](self.keys_view.selected_item.path, 
                                                                                       selected_item.name,
                                                                                       selected_item.data_type,
                                                                                       new_value)
 
-            edit_value_window = edit_value_class(self.parent, selected_item.display_name, selected_item.data, edit_value_callback)
+            # This callback is called when the application wants to show the "edit value" dialog
+            edit_value_dialog = lambda data: edit_value_class(self.parent, 
+                                                              selected_item.display_name, 
+                                                              data, 
+                                                              edit_value_callback)
+
+            self.callbacks[Events.SHOW_EDIT_VALUE](self.keys_view.selected_item.path,
+                                                   selected_item.name,
+                                                   edit_value_dialog)
 
         except IndexError:
             pass
@@ -314,7 +325,7 @@ class RegistryDetailsView():
             self.keys_view.create_new_key()
         else:
             try:
-                data_type = self._menu_item_to_winreg_data_type_str[item]
+                data_type = self.menu_item_to_winreg_data_type_str[item]
             except KeyError:
                 raise RuntimeError(f"Unknown item {item}")
 

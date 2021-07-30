@@ -31,7 +31,7 @@ License:
 
 from rgedt.common import RgEdtException
 
-from typing import Any, List
+from typing import Any, Callable, List
 
 from . import config
 from . import view as v
@@ -46,6 +46,7 @@ class Application():
         #  of events from the view
         callbacks = {
             v.Events.KEY_SELECTED:        self.cb_key_selected,
+            v.Events.SHOW_EDIT_VALUE:     self.cb_show_edit_value,
             v.Events.EDIT_VALUE:          self.cb_edit_value,
             v.Events.ADD_KEY:             self.cb_add_key,
             v.Events.ADD_VALUE:           self.cb_add_value,
@@ -114,6 +115,29 @@ class Application():
         else:
             self.view.set_status("Selected key is not under the configured key list")
             self.view.reset_details()
+
+    def cb_show_edit_value(self, path: str, data_name: str, edit_value_dialog: Callable[[str], None]) -> None:
+        """Callback for an event where the user requests to edit a value.
+        
+        Triggers the view to show the "edit value" dialog.
+
+        Args:
+            path: 
+                Path to the registry key being edited.
+            data_name:
+                Name of the registry value being edited.
+            edit_value_dialog:
+                Callback to display the "edit value" dialog
+
+        """
+
+        try:
+            data = self.model.get_registry_key_value(path, data_name)
+        except RgEdtException:
+            # TODO: This is mainly a problem when editing a "fake" default value
+            data = ""
+
+        edit_value_dialog(data)
 
     def cb_edit_value(self, path: str, data_name: str, data_type: str, new_value: Any) -> None:
         """Callback for an event where the user edits a value.
