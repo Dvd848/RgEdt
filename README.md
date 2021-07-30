@@ -24,6 +24,10 @@ Edit Dialog:
 
 ![Edit Dialog](docs/images/edit_dword.png)
 
+## Dependencies
+
+* Python 3.8+ with tkinter
+
 ## Future Development
 
 * Sort the key list
